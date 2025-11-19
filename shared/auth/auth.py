@@ -24,7 +24,10 @@ def is_authenticated() -> bool:
 
 def has_role(*roles: Role) -> bool:
     u = current_user()
-    return bool(u and u.get("rol") in roles)
+    if not u:
+        return False
+    user_role = u.get("rol", "").lower()
+    return user_role in [r.lower() for r in roles]
 
 def require_role(*roles: Role, login_page_name: str = "00_Login") -> None:
     if not is_authenticated():
