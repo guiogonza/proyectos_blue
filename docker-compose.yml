@@ -1,0 +1,52 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: project_ops_mysql
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-project_ops}
+      MYSQL_USER: ${DB_USER:-project_ops_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-project_ops_pass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+    ports:
+      - "3309:3306"
+    command: ["--default-authentication-plugin=mysql_native_password", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: python:3.11-slim
+    container_name: project_ops_app
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONPATH=/app
+      - TZ=${TZ:-America/Bogota}
+      - ENV=${ENV:-dev}
+      - DEBUG=${DEBUG:-true}
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-change_me}
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-project_ops}
+      - DB_USER=${DB_USER:-project_ops_user}
+      - DB_PASSWORD=${DB_PASSWORD:-project_ops_pass}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+    command: >
+      bash -lc "
+      pip install --no-cache-dir -r requirements.txt &&
+      python -m pip install streamlit &&
+      streamlit run apps/dashboard/main.py --server.address=0.0.0.0 --server.port=8501
+      "
+
+volumes:
+  mysql_data:

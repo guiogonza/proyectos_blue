@@ -1,0 +1,1 @@
+'''Esquema/DTO Auth (placeholder)'''
