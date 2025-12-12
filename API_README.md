@@ -120,13 +120,13 @@ curl -u admin@projectops.com:admin123 \
 
 Para acceder a la API en el servidor remoto:
 
-**URL:** http://164.68.118.86:8000
+**URL:** http://164.68.118.86:8002
 
-**Documentación:** http://164.68.118.86:8000/docs
+**Documentación:** http://164.68.118.86:8002/docs
 
 ```bash
 curl -u admin@projectops.com:admin123 \
-  http://164.68.118.86:8000/api/personas
+  http://164.68.118.86:8002/api/personas
 ```
 
 ## 📚 Documentación Interactiva
