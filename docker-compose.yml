@@ -69,7 +69,7 @@ services:
       mysql:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "8002:8000"
     command: >
       bash -lc "
       pip install --no-cache-dir -r requirements.txt &&
