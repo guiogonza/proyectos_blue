@@ -24,17 +24,18 @@ from domain.schemas.asignaciones import AsignacionListItem
 from domain.schemas.usuarios import UsuarioListItem
 
 app = FastAPI(
-    title="Project Ops API",
-    description="API REST para gestión de proyectos, sprints, personas y asignaciones",
+    title="Project Ops API - Read Only",
+    description="API REST de solo lectura para consulta de proyectos, sprints, personas y asignaciones. No permite crear, editar ni eliminar datos.",
     version="1.0.0"
 )
 
 # Configurar CORS para permitir acceso desde cualquier origen
+# Solo permite métodos GET (read-only)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET"],  # Solo lectura
     allow_headers=["*"],
 )
 
@@ -161,8 +162,10 @@ def health_check():
 def root():
     """Endpoint raíz con información de la API"""
     return {
-        "message": "Project Ops API",
+        "message": "Project Ops API - Read Only",
         "version": "1.0.0",
+        "mode": "read-only",
+        "description": "API de solo consulta. No permite crear, editar ni eliminar datos.",
         "docs": "/docs",
         "endpoints": {
             "personas": "/api/personas",

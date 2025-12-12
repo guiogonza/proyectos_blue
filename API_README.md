@@ -1,6 +1,8 @@
-# API REST - Project Ops
+# API REST - Project Ops (Read Only)
 
-API REST para gestión de proyectos, sprints, personas y asignaciones.
+API REST de **solo lectura** para consulta de proyectos, sprints, personas y asignaciones.
+
+**⚠️ IMPORTANTE:** Esta API es **READ-ONLY**. Solo permite consultar datos, **NO** permite crear, editar ni eliminar registros.
 
 ## 🚀 Inicio Rápido
 
@@ -10,9 +12,9 @@ API REST para gestión de proyectos, sprints, personas y asignaciones.
 docker-compose up api
 ```
 
-La API estará disponible en: **http://localhost:8000**
+La API estará disponible en: **http://localhost:8502**
 
-Documentación interactiva: **http://localhost:8000/docs**
+Documentación interactiva: **http://localhost:8502/docs**
 
 ## 🔐 Autenticación
 
@@ -25,7 +27,7 @@ La API usa **HTTP Basic Authentication**. Debes enviar las credenciales en cada 
 ### Ejemplo con curl:
 
 ```bash
-curl -u admin@projectops.com:admin123 http://localhost:8000/api/personas
+curl -u admin@projectops.com:admin123 http://localhost:8502/api/personas
 ```
 
 ### Ejemplo con Python:
@@ -35,7 +37,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 response = requests.get(
-    'http://localhost:8000/api/personas',
+    'http://localhost:8502/api/personas',
     auth=HTTPBasicAuth('admin@projectops.com', 'admin123')
 )
 print(response.json())
@@ -48,7 +50,7 @@ const username = 'admin@projectops.com';
 const password = 'admin123';
 const credentials = btoa(`${username}:${password}`);
 
-fetch('http://localhost:8000/api/personas', {
+fetch('http://localhost:8502/api/personas', {
     headers: {
         'Authorization': `Basic ${credentials}`
     }
@@ -58,6 +60,8 @@ fetch('http://localhost:8000/api/personas', {
 ```
 
 ## 📋 Endpoints Disponibles
+
+**Todos los endpoints son GET (solo lectura)**
 
 ### Personas
 - `GET /api/personas` - Listar todas las personas
@@ -92,49 +96,49 @@ fetch('http://localhost:8000/api/personas', {
 
 ```bash
 curl -u admin@projectops.com:admin123 \
-  "http://localhost:8000/api/personas?activo=true"
+  "http://localhost:8502/api/personas?activo=true"
 ```
 
 ### Buscar proyectos por nombre
 
 ```bash
 curl -u admin@projectops.com:admin123 \
-  "http://localhost:8000/api/proyectos?search=Inventario"
+  "http://localhost:8502/api/proyectos?search=Inventario"
 ```
 
 ### Obtener sprints de un proyecto específico
 
 ```bash
 curl -u admin@projectops.com:admin123 \
-  "http://localhost:8000/api/sprints?proyecto_id=1"
+  "http://localhost:8502/api/sprints?proyecto_id=1"
 ```
 
 ### Obtener asignaciones de una persona
 
 ```bash
 curl -u admin@projectops.com:admin123 \
-  "http://localhost:8000/api/asignaciones?persona_id=1&solo_activas=true"
+  "http://localhost:8502/api/asignaciones?persona_id=1&solo_activas=true"
 ```
 
 ## 🌐 Servidor Remoto
 
 Para acceder a la API en el servidor remoto:
 
-**URL:** http://164.68.118.86:8002
+**URL:** http://164.68.118.86:8502
 
-**Documentación:** http://164.68.118.86:8002/docs
+**Documentación:** http://164.68.118.86:8502/docs
 
 ```bash
 curl -u admin@projectops.com:admin123 \
-  http://164.68.118.86:8002/api/personas
+  http://164.68.118.86:8502/api/personas
 ```
 
 ## 📚 Documentación Interactiva
 
 FastAPI genera automáticamente documentación interactiva:
 
-- **Swagger UI:** http://localhost:8000/docs
-- **ReDoc:** http://localhost:8000/redoc
+- **Swagger UI:** http://localhost:8502/docs
+- **ReDoc:** http://localhost:8502/redoc
 
 Desde la documentación puedes:
 1. Ver todos los endpoints disponibles

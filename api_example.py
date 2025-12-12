@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 import json
 
 # Configuración
-API_URL = "http://164.68.118.86:8002"  # Cambiar a localhost:8002 para uso local
+API_URL = "http://164.68.118.86:8502"  # Cambiar a localhost:8502 para uso local
 USERNAME = "admin@projectops.com"
 PASSWORD = "admin123"
 
