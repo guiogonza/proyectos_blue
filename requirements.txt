@@ -4,3 +4,5 @@ bcrypt
 pymysql
 streamlit
 python-dotenv
+fastapi
+uvicorn[standard]

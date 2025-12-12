@@ -48,5 +48,33 @@ services:
       streamlit run apps/dashboard/main.py --server.address=0.0.0.0 --server.port=8501
       "
 
+  api:
+    image: python:3.11-slim
+    container_name: project_ops_api
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONPATH=/app
+      - TZ=${TZ:-America/Bogota}
+      - ENV=${ENV:-dev}
+      - DEBUG=${DEBUG:-true}
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-change_me}
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-project_ops}
+      - DB_USER=${DB_USER:-project_ops_user}
+      - DB_PASSWORD=${DB_PASSWORD:-project_ops_pass}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    command: >
+      bash -lc "
+      pip install --no-cache-dir -r requirements.txt &&
+      uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
 volumes:
   mysql_data:
