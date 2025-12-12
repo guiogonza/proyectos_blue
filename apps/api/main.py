@@ -2,6 +2,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.responses import ORJSONResponse
 from typing import List, Optional
 import sys
 import os
@@ -26,7 +27,8 @@ from domain.schemas.usuarios import UsuarioListItem
 app = FastAPI(
     title="Project Ops API - Read Only",
     description="API REST de solo lectura para consulta de proyectos, sprints, personas y asignaciones. No permite crear, editar ni eliminar datos.",
-    version="1.0.0"
+    version="1.0.0",
+    default_response_class=ORJSONResponse
 )
 
 # Configurar CORS para permitir acceso desde cualquier origen
