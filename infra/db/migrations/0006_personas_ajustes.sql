@@ -1,0 +1,18 @@
+-- Migración para ajustar tabla personas según especificaciones
+-- Renombrar campos
+ALTER TABLE personas CHANGE COLUMN rol ROL_PRINCIPAL VARCHAR(100) NOT NULL;
+ALTER TABLE personas CHANGE COLUMN tarifa_interna COSTO_RECURSO DECIMAL(14,2) NULL;
+ALTER TABLE personas CHANGE COLUMN cedula NUMERO_DOCUMENTO VARCHAR(20) NULL;
+
+-- Agregar nuevos campos
+ALTER TABLE personas ADD COLUMN PAIS VARCHAR(100) NULL AFTER correo;
+ALTER TABLE personas ADD COLUMN SENIORITY VARCHAR(50) NULL AFTER PAIS;
+ALTER TABLE personas ADD COLUMN LIDER_DIRECTO BIGINT NULL AFTER SENIORITY;
+ALTER TABLE personas ADD COLUMN TIPO_DOCUMENTO VARCHAR(50) NULL AFTER LIDER_DIRECTO;
+
+-- Agregar foreign key para LIDER_DIRECTO
+ALTER TABLE personas ADD CONSTRAINT fk_personas_lider 
+    FOREIGN KEY (LIDER_DIRECTO) REFERENCES personas(id) ON DELETE SET NULL;
+
+-- Crear índice para búsquedas por líder
+CREATE INDEX idx_personas_lider ON personas(LIDER_DIRECTO);

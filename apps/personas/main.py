@@ -1,13 +1,13 @@
 # apps/personas/main.py
 
 import streamlit as st
-from domain.schemas.personas import PersonaCreate, PersonaUpdate, ROLES_PERMITIDOS
+from domain.schemas.personas import PersonaCreate, PersonaUpdate, ROLES_PERMITIDOS, SENIORITY_PERMITIDOS, TIPOS_DOCUMENTO_PERMITIDOS
 from domain.services import personas_service
 from shared.utils.exports import export_csv
 
 def render():
     st.title("👤 Gestión de Personas")
-    st.caption("CRUD + filtros + activar/desactivar + export CSV")
+    st.caption("CRUD + filtros + activar/desactivar + export CSV + organigrama")
 
     col_f1, col_f2, col_f3 = st.columns([1,1,2])
     with col_f1:
@@ -38,27 +38,46 @@ def render():
     tab_create, tab_edit, tab_estado, tab_delete = st.tabs(["Crear persona", "Editar persona", "Activar/Desactivar", "Eliminar"])
 
     with tab_create:
+        # Obtener personas para selector de líder
+        personas_lider = personas_service.get_personas_para_lider()
+        opciones_lider = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider]
+        
         with st.form("form_create", clear_on_submit=True):
             c1, c2, c3 = st.columns([2,1,1])
             nombre = c1.text_input("Nombre", "")
-            rol = c2.selectbox("Rol", options=ROLES_PERMITIDOS, index=0)
-            tarifa = c3.number_input("Tarifa interna (opcional)", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
+            rol = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=0)
+            tarifa = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
             
-            # Campos de contacto
+            # Segunda fila: documento, contacto, correo
             c4, c5, c6 = st.columns([1,1,1])
-            cedula = c4.text_input("Cédula (opcional)", "")
-            numero_contacto = c5.text_input("Número de contacto (opcional)", "")
-            correo = c6.text_input("Correo electrónico (opcional)", "")
+            tipo_doc = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, index=0)
+            numero_doc = c5.text_input("Número Documento (opcional)", "")
+            numero_contacto = c6.text_input("Número de contacto (opcional)", "")
+            
+            # Tercera fila: país, seniority, líder directo
+            c7, c8, c9 = st.columns([1,1,1])
+            correo = c7.text_input("Correo electrónico (opcional)", "")
+            pais = c8.text_input("País (opcional)", "")
+            seniority = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, index=0)
+            
+            # Cuarta fila: líder directo
+            lider_idx = st.selectbox("Líder Directo", options=range(len(opciones_lider)), 
+                                     format_func=lambda i: opciones_lider[i][1], index=0)
+            lider_id = opciones_lider[lider_idx][0] if lider_idx > 0 else None
             
             if st.form_submit_button("Crear"):
                 try:
                     dto = PersonaCreate(
                         nombre=nombre.strip(), 
-                        rol=rol, 
-                        tarifa_interna=(tarifa if tarifa > 0 else None),
-                        cedula=cedula.strip() if cedula.strip() else None,
+                        ROL_PRINCIPAL=rol, 
+                        COSTO_RECURSO=(tarifa if tarifa > 0 else None),
+                        NUMERO_DOCUMENTO=numero_doc.strip() if numero_doc.strip() else None,
                         numero_contacto=numero_contacto.strip() if numero_contacto.strip() else None,
-                        correo=correo.strip() if correo.strip() else None
+                        correo=correo.strip() if correo.strip() else None,
+                        PAIS=pais.strip() if pais.strip() else None,
+                        SENIORITY=seniority,
+                        LIDER_DIRECTO=lider_id,
+                        TIPO_DOCUMENTO=tipo_doc
                     )
                     personas_service.crear(dto)
                     st.success("Creada")
@@ -67,22 +86,49 @@ def render():
                     st.error(str(e))
 
     with tab_edit:
-        options = {f"{i.id} - {i.nombre} ({i.rol})": i for i in items}
+        # Obtener personas para selector de líder (excluyendo la persona actual en edición)
+        personas_lider = personas_service.get_personas_para_lider()
+        
+        options = {f"{i.id} - {i.nombre} ({i.ROL_PRINCIPAL})": i for i in items}
         if not options:
             st.info("No hay registros para editar con el filtro actual.")
         else:
             sel = options[st.selectbox("Selecciona persona", list(options.keys()))]
+            
+            # Filtrar opciones de líder para excluir la persona actual (evitar auto-referencia)
+            opciones_lider_edit = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider if p["id"] != sel.id]
+            
             with st.form("form_edit"):
                 c1, c2, c3 = st.columns([2,1,1])
                 nombre_e = c1.text_input("Nombre", sel.nombre)
-                rol_e = c2.selectbox("Rol", options=ROLES_PERMITIDOS, index=(ROLES_PERMITIDOS.index(sel.rol) if sel.rol in ROLES_PERMITIDOS else 0))
-                tarifa_e = c3.number_input("Tarifa interna (opcional)", min_value=0.0, value=float(sel.tarifa_interna or 0.0), step=1000.0, format="%.2f")
+                rol_e = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=(ROLES_PERMITIDOS.index(sel.ROL_PRINCIPAL) if sel.ROL_PRINCIPAL in ROLES_PERMITIDOS else 0))
+                tarifa_e = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=float(sel.COSTO_RECURSO or 0.0), step=1000.0, format="%.2f")
                 
-                # Campos de contacto para edición
+                # Segunda fila: documento, contacto, correo
                 c4, c5, c6 = st.columns([1,1,1])
-                cedula_e = c4.text_input("Cédula (opcional)", sel.cedula or "")
-                numero_contacto_e = c5.text_input("Número de contacto (opcional)", sel.numero_contacto or "")
-                correo_e = c6.text_input("Correo electrónico (opcional)", sel.correo or "")
+                tipo_doc_e = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, 
+                                         index=(TIPOS_DOCUMENTO_PERMITIDOS.index(sel.TIPO_DOCUMENTO) if sel.TIPO_DOCUMENTO and sel.TIPO_DOCUMENTO in TIPOS_DOCUMENTO_PERMITIDOS else 0))
+                numero_doc_e = c5.text_input("Número Documento (opcional)", sel.NUMERO_DOCUMENTO or "")
+                numero_contacto_e = c6.text_input("Número de contacto (opcional)", sel.numero_contacto or "")
+                
+                # Tercera fila: país, seniority, correo
+                c7, c8, c9 = st.columns([1,1,1])
+                correo_e = c7.text_input("Correo electrónico (opcional)", sel.correo or "")
+                pais_e = c8.text_input("País (opcional)", sel.PAIS or "")
+                seniority_e = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, 
+                                          index=(SENIORITY_PERMITIDOS.index(sel.SENIORITY) if sel.SENIORITY and sel.SENIORITY in SENIORITY_PERMITIDOS else 0))
+                
+                # Cuarta fila: líder directo
+                lider_actual_idx = 0
+                if sel.LIDER_DIRECTO:
+                    for idx, (lid, lnom) in enumerate(opciones_lider_edit):
+                        if lid == sel.LIDER_DIRECTO:
+                            lider_actual_idx = idx
+                            break
+                
+                lider_idx_e = st.selectbox("Líder Directo", options=range(len(opciones_lider_edit)), 
+                                          format_func=lambda i: opciones_lider_edit[i][1], index=lider_actual_idx)
+                lider_id_e = opciones_lider_edit[lider_idx_e][0] if lider_idx_e < len(opciones_lider_edit) and opciones_lider_edit[lider_idx_e][0] > 0 else None
                 
                 # Campo de estado activo/inactivo
                 activo_e = st.checkbox("Activo", value=sel.activo, help="Desmarcar para desactivar la persona")
@@ -92,11 +138,15 @@ def render():
                         dto = PersonaUpdate(
                             id=sel.id, 
                             nombre=nombre_e.strip(), 
-                            rol=rol_e, 
-                            tarifa_interna=(tarifa_e if tarifa_e > 0 else None),
-                            cedula=cedula_e.strip() if cedula_e.strip() else None,
+                            ROL_PRINCIPAL=rol_e, 
+                            COSTO_RECURSO=(tarifa_e if tarifa_e > 0 else None),
+                            NUMERO_DOCUMENTO=numero_doc_e.strip() if numero_doc_e.strip() else None,
                             numero_contacto=numero_contacto_e.strip() if numero_contacto_e.strip() else None,
                             correo=correo_e.strip() if correo_e.strip() else None,
+                            PAIS=pais_e.strip() if pais_e.strip() else None,
+                            SENIORITY=seniority_e,
+                            LIDER_DIRECTO=lider_id_e,
+                            TIPO_DOCUMENTO=tipo_doc_e,
                             activo=activo_e
                         )
                         personas_service.actualizar(dto)
@@ -124,7 +174,7 @@ def render():
 
     with tab_delete:
         st.warning("⚠️ **Advertencia**: Esta acción eliminará permanentemente la persona de la base de datos.")
-        options_del = {f"{i.id} - {i.nombre} ({i.rol})": i for i in items}
+        options_del = {f"{i.id} - {i.nombre} ({i.ROL_PRINCIPAL})": i for i in items}
         if not options_del:
             st.info("No hay registros para eliminar con el filtro actual.")
         else:

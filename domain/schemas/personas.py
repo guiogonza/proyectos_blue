@@ -4,19 +4,37 @@ from typing import Optional
 from pydantic import BaseModel, Field, validator
 
 ROLES_PERMITIDOS = ["PM", "Desarrollador", "Analista", "QA", "DevOps", "Data", "Soporte"]
+SENIORITY_PERMITIDOS = ["Junior", "Semi-Senior", "Senior", "Lead", "Principal"]
+TIPOS_DOCUMENTO = ["Cédula", "Pasaporte", "DNI", "Otro"]
 
 class PersonaCreate(BaseModel):
     nombre: str = Field(min_length=2, max_length=200)
-    rol: str
-    tarifa_interna: Optional[float] = Field(default=None, ge=0)
-    cedula: Optional[str] = Field(default=None, max_length=20)
+    ROL_PRINCIPAL: str
+    COSTO_RECURSO: Optional[float] = Field(default=None, ge=0)
+    NUMERO_DOCUMENTO: Optional[str] = Field(default=None, max_length=20)
     numero_contacto: Optional[str] = Field(default=None, max_length=15)
     correo: Optional[str] = Field(default=None, max_length=100)
+    PAIS: Optional[str] = Field(default=None, max_length=100)
+    SENIORITY: Optional[str] = None
+    LIDER_DIRECTO: Optional[int] = None
+    TIPO_DOCUMENTO: Optional[str] = None
 
-    @validator("rol")
+    @validator("ROL_PRINCIPAL")
     def validar_rol(cls, v):
         if v not in ROLES_PERMITIDOS:
             raise ValueError(f"Rol inválido. Usa uno de: {', '.join(ROLES_PERMITIDOS)}")
+        return v
+    
+    @validator("SENIORITY")
+    def validar_seniority(cls, v):
+        if v and v not in SENIORITY_PERMITIDOS:
+            raise ValueError(f"Seniority inválido. Usa uno de: {', '.join(SENIORITY_PERMITIDOS)}")
+        return v
+    
+    @validator("TIPO_DOCUMENTO")
+    def validar_tipo_documento(cls, v):
+        if v and v not in TIPOS_DOCUMENTO:
+            raise ValueError(f"Tipo de documento inválido. Usa uno de: {', '.join(TIPOS_DOCUMENTO)}")
         return v
     
     @validator("correo")
@@ -36,9 +54,14 @@ class PersonaUpdate(PersonaCreate):
 class PersonaListItem(BaseModel):
     id: int
     nombre: str
-    rol: str
-    tarifa_interna: Optional[float]
+    ROL_PRINCIPAL: str
+    COSTO_RECURSO: Optional[float]
     activo: bool
-    cedula: Optional[str]
+    NUMERO_DOCUMENTO: Optional[str]
     numero_contacto: Optional[str]
     correo: Optional[str]
+    PAIS: Optional[str]
+    SENIORITY: Optional[str]
+    LIDER_DIRECTO: Optional[int]
+    LIDER_NOMBRE: Optional[str] = None  # Para mostrar el nombre del líder
+    TIPO_DOCUMENTO: Optional[str]

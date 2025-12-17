@@ -40,28 +40,36 @@ def _log_event(conn, tipo: str, entidad: str, entidad_id: int,
                 (actor_id, tipo, entidad, entidad_id)
             )
 
-def create_persona(nombre: str, rol: str, tarifa_interna: Optional[float], 
-                  cedula: Optional[str] = None, numero_contacto: Optional[str] = None,
-                  correo: Optional[str] = None, activo: bool = True) -> int:
+def create_persona(nombre: str, ROL_PRINCIPAL: str, COSTO_RECURSO: Optional[float], 
+                  NUMERO_DOCUMENTO: Optional[str] = None, numero_contacto: Optional[str] = None,
+                  correo: Optional[str] = None, PAIS: Optional[str] = None, SENIORITY: Optional[str] = None,
+                  LIDER_DIRECTO: Optional[int] = None, TIPO_DOCUMENTO: Optional[str] = None, 
+                  activo: bool = True) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO personas (nombre, rol, tarifa_interna, cedula, numero_contacto, correo, activo) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (nombre, rol, tarifa_interna, cedula, numero_contacto, correo, 1 if activo else 0)
+            "INSERT INTO personas (nombre, ROL_PRINCIPAL, COSTO_RECURSO, NUMERO_DOCUMENTO, numero_contacto, correo, "
+            "PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, activo) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (nombre, ROL_PRINCIPAL, COSTO_RECURSO, NUMERO_DOCUMENTO, numero_contacto, correo, 
+             PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, 1 if activo else 0)
         )
         persona_id = cur.lastrowid
-        _log_event(conn, "create", "personas", persona_id, {"nombre": nombre, "rol": rol})
+        _log_event(conn, "create", "personas", persona_id, {"nombre": nombre, "ROL_PRINCIPAL": ROL_PRINCIPAL})
         return persona_id
 
-def update_persona(persona_id: int, nombre: str, rol: str, tarifa_interna: Optional[float],
-                  cedula: Optional[str] = None, numero_contacto: Optional[str] = None,
-                  correo: Optional[str] = None, activo: bool = True) -> None:
+def update_persona(persona_id: int, nombre: str, ROL_PRINCIPAL: str, COSTO_RECURSO: Optional[float],
+                  NUMERO_DOCUMENTO: Optional[str] = None, numero_contacto: Optional[str] = None,
+                  correo: Optional[str] = None, PAIS: Optional[str] = None, SENIORITY: Optional[str] = None,
+                  LIDER_DIRECTO: Optional[int] = None, TIPO_DOCUMENTO: Optional[str] = None,
+                  activo: bool = True) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "UPDATE personas SET nombre=%s, rol=%s, tarifa_interna=%s, cedula=%s, numero_contacto=%s, correo=%s, activo=%s WHERE id=%s",
-            (nombre, rol, tarifa_interna, cedula, numero_contacto, correo, 1 if activo else 0, persona_id)
+            "UPDATE personas SET nombre=%s, ROL_PRINCIPAL=%s, COSTO_RECURSO=%s, NUMERO_DOCUMENTO=%s, "
+            "numero_contacto=%s, correo=%s, PAIS=%s, SENIORITY=%s, LIDER_DIRECTO=%s, TIPO_DOCUMENTO=%s, activo=%s WHERE id=%s",
+            (nombre, ROL_PRINCIPAL, COSTO_RECURSO, NUMERO_DOCUMENTO, numero_contacto, correo,
+             PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, 1 if activo else 0, persona_id)
         )
-        _log_event(conn, "update", "personas", persona_id, {"nombre": nombre, "rol": rol, "activo": activo})
+        _log_event(conn, "update", "personas", persona_id, {"nombre": nombre, "ROL_PRINCIPAL": ROL_PRINCIPAL, "activo": activo})
 
 def set_activo(persona_id: int, activo: bool) -> None:
     with get_conn() as conn, conn.cursor() as cur:
@@ -74,17 +82,19 @@ def get_persona(persona_id: int) -> Optional[Dict[str, Any]]:
         return cur.fetchone()
 
 def list_personas(rol: Optional[str] = None, solo_activas: Optional[bool] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
-    sql = "SELECT p.* FROM personas p"
+    sql = """SELECT p.*, l.nombre as LIDER_NOMBRE 
+             FROM personas p 
+             LEFT JOIN personas l ON p.LIDER_DIRECTO = l.id"""
     where = []
     params: List[Any] = []
     if rol:
-        where.append("p.rol = %s")
+        where.append("p.ROL_PRINCIPAL = %s")
         params.append(rol)
     if solo_activas is not None:
         where.append("p.activo = %s")
         params.append(1 if solo_activas else 0)
     if search:
-        where.append("(p.nombre LIKE %s OR p.rol LIKE %s)")
+        where.append("(p.nombre LIKE %s OR p.ROL_PRINCIPAL LIKE %s)")
         like = f"%{search}%"
         params.extend([like, like])
     if where:
@@ -105,6 +115,14 @@ def exists_nombre(nombre: str, exclude_id: Optional[int] = None) -> bool:
         cur.execute(sql, tuple(params))
         row = cur.fetchone()
     return row is not None
+
+def get_personas_para_lider() -> List[Dict[str, Any]]:
+    """Obtiene lista de personas activas que pueden ser líderes"""
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, nombre, ROL_PRINCIPAL FROM personas WHERE activo=1 ORDER BY nombre ASC"
+        )
+        return cur.fetchall()
 
 def delete_persona(persona_id: int) -> None:
     with get_conn() as conn, conn.cursor() as cur:
