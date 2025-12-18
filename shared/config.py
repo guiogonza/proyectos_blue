@@ -17,5 +17,6 @@ class Settings:
     DB_NAME: str = os.getenv("DB_NAME", "project_ops")
     DB_USER: str = os.getenv("DB_USER", "project_ops_user")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "project_ops_pass")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "supersecretkey")
 
 settings = Settings()

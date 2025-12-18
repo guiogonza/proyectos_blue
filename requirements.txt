@@ -7,3 +7,5 @@ python-dotenv
 fastapi
 uvicorn[standard]
 orjson
+extra-streamlit-components
+pyjwt

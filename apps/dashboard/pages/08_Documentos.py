@@ -56,6 +56,23 @@ if items:
         })
     
     st.dataframe(display_data, use_container_width=True, hide_index=True)
+    
+    # Botones para ver/descargar documentos
+    st.markdown("#### 📥 Ver/Descargar Documentos")
+    cols = st.columns(4)
+    for idx, doc in enumerate(items):
+        with cols[idx % 4]:
+            if os.path.exists(doc.ruta_archivo):
+                with open(doc.ruta_archivo, "rb") as f:
+                    st.download_button(
+                        label=f"📄 {doc.nombre_archivo[:20]}.." if len(doc.nombre_archivo) > 20 else f"📄 {doc.nombre_archivo}",
+                        data=f.read(),
+                        file_name=doc.nombre_archivo,
+                        mime=doc.tipo_mime or "application/octet-stream",
+                        key=f"download_{doc.id}"
+                    )
+            else:
+                st.caption(f"❌ {doc.nombre_archivo} (no encontrado)")
 else:
     st.info("No hay documentos con los filtros seleccionados.")
 
@@ -156,19 +173,32 @@ with tab_delete:
     if not items:
         st.info("No hay documentos para eliminar.")
     else:
-        options_del = {f"{d.id} - {d.nombre_archivo} ({d.proyecto_nombre})": d for d in items}
-        sel_del = options_del[st.selectbox("Selecciona documento a eliminar", list(options_del.keys()), key="delete_select")]
+        # Filtro por proyecto para eliminar
+        col_del1, col_del2 = st.columns([1, 2])
+        with col_del1:
+            proyecto_del_filter = st.selectbox("Filtrar por Proyecto", ["(Todos)"] + list(proyecto_opts.keys()), key="delete_proyecto_filter")
+            proyecto_id_del = None if proyecto_del_filter == "(Todos)" else proyecto_opts[proyecto_del_filter]
         
-        st.error(f"Vas a eliminar: **{sel_del.nombre_archivo}**")
-        st.caption(f"Proyecto: {sel_del.proyecto_nombre}")
-        st.caption(f"Subido: {sel_del.fecha_carga.strftime('%Y-%m-%d %H:%M:%S')}")
+        # Filtrar documentos por proyecto seleccionado
+        items_del = [d for d in items if proyecto_id_del is None or d.proyecto_id == proyecto_id_del]
         
-        confirmar = st.checkbox("Confirmo que deseo eliminar este documento", key="confirm_delete")
+        if not items_del:
+            st.info("No hay documentos en el proyecto seleccionado.")
+        else:
+            options_del = {f"{d.id} - {d.nombre_archivo} ({d.proyecto_nombre})": d for d in items_del}
+            with col_del2:
+                sel_del = options_del[st.selectbox("Selecciona documento a eliminar", list(options_del.keys()), key="delete_select")]
         
-        if st.button("🗑️ Eliminar permanentemente", type="primary", disabled=not confirmar):
-            try:
-                documentos_service.eliminar(sel_del.id)
-                st.success(f"Documento '{sel_del.nombre_archivo}' eliminado exitosamente")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error al eliminar: {str(e)}")
+            st.error(f"Vas a eliminar: **{sel_del.nombre_archivo}**")
+            st.caption(f"Proyecto: {sel_del.proyecto_nombre}")
+            st.caption(f"Subido: {sel_del.fecha_carga.strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            confirmar = st.checkbox("Confirmo que deseo eliminar este documento", key="confirm_delete")
+            
+            if st.button("🗑️ Eliminar permanentemente", type="primary", disabled=not confirmar):
+                try:
+                    documentos_service.eliminar(sel_del.id)
+                    st.success(f"Documento '{sel_del.nombre_archivo}' eliminado exitosamente")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al eliminar: {str(e)}")

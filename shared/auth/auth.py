@@ -1,11 +1,34 @@
 # shared/auth.py
 import streamlit as st
+import extra_streamlit_components as stx
+import jwt
 from typing import Literal, Optional, Dict, Any
 from datetime import datetime, timedelta
+from shared.config import settings
 
 Role = Literal["admin", "viewer"]
 SESSION_KEY = "auth_user"
 SESSION_TIMEOUT_MINUTES = 30  # Aumentado a 30 minutos
+COOKIE_NAME = "project_ops_auth"
+
+def get_cookie_manager():
+    return stx.CookieManager(key="auth_cookies")
+
+def create_token(user: Dict[str, Any]) -> str:
+    payload = {
+        "sub": str(user["id"]),
+        "email": user["email"],
+        "rol_app": user["rol_app"],
+        "exp": datetime.now() + timedelta(days=7)
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+def decode_token(token: str) -> Optional[Dict[str, Any]]:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None
 
 def start_session(user: Dict[str, Any]) -> None:
     st.session_state[SESSION_KEY] = {
@@ -14,10 +37,25 @@ def start_session(user: Dict[str, Any]) -> None:
         "rol_app": user["rol_app"],
         "last_activity": datetime.now().isoformat(),
     }
+    
+    # Guardar cookie
+    try:
+        token = create_token(user)
+        cm = get_cookie_manager()
+        cm.set(COOKIE_NAME, token, expires_at=datetime.now() + timedelta(days=7))
+    except Exception as e:
+        print(f"Error setting cookie: {e}")
 
 def end_session() -> None:
     if SESSION_KEY in st.session_state:
         del st.session_state[SESSION_KEY]
+    
+    # Borrar cookie
+    try:
+        cm = get_cookie_manager()
+        cm.delete(COOKIE_NAME)
+    except Exception as e:
+        print(f"Error deleting cookie: {e}")
 
 def renew_session() -> None:
     """Renueva el timestamp de última actividad."""
@@ -41,13 +79,33 @@ def is_session_expired() -> bool:
         return True
 
 def current_user() -> Optional[Dict[str, Any]]:
-    if is_session_expired():
-        end_session()
-        return None
+    # 1. Verificar session_state
+    if SESSION_KEY in st.session_state:
+        if not is_session_expired():
+             renew_session()
+             return st.session_state[SESSION_KEY]
     
-    # Renovar sesión en cada interacción
-    renew_session()
-    return st.session_state.get(SESSION_KEY)
+    # 2. Si no hay sesión válida en memoria, intentar recuperar de cookie
+    try:
+        cm = get_cookie_manager()
+        token = cm.get(COOKIE_NAME)
+        
+        if token:
+            payload = decode_token(token)
+            if payload:
+                # Restaurar sesión
+                user_data = {
+                    "id": payload["sub"],
+                    "email": payload["email"],
+                    "rol_app": payload["rol_app"],
+                    "last_activity": datetime.now().isoformat()
+                }
+                st.session_state[SESSION_KEY] = user_data
+                return user_data
+    except Exception as e:
+        print(f"Error reading cookie: {e}")
+            
+    return None
 
 def is_authenticated() -> bool:
     return current_user() is not None
@@ -73,7 +131,7 @@ def require_authentication() -> None:
     Oculta completamente la página si el usuario no está autenticado o la sesión expiró.
     Redirige silenciosamente al login.
     """
-    if is_session_expired() or not is_authenticated():
+    if not is_authenticated():
         end_session()
         hide_sidebar()
         st.switch_page("pages/00_Login.py")
@@ -83,7 +141,7 @@ def hide_sidebar_when_not_authenticated() -> None:
     Oculta el menú lateral si el usuario no está autenticado o la sesión expiró.
     Solo debe llamarse desde páginas que requieren autenticación.
     """
-    if is_session_expired() or not is_authenticated():
+    if not is_authenticated():
         end_session()
         hide_sidebar()
         st.switch_page("pages/00_Login.py")
