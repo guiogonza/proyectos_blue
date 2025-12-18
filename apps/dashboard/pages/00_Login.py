@@ -3,8 +3,11 @@ import streamlit as st
 from domain.services.auth_service import verify_credentials
 from shared.auth.auth import (
     start_session, end_session, is_authenticated, 
-    current_user, hide_sidebar, is_session_expired
+    current_user, hide_sidebar, init_auth
 )
+
+# IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie
+init_auth()
 
 # Ocultar sidebar si no está autenticado
 if not is_authenticated():

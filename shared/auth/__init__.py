@@ -14,5 +14,6 @@ from .auth import (
     is_editor,
     is_viewer,
     can_edit,
-    get_user_proyectos
+    get_user_proyectos,
+    init_auth
 )

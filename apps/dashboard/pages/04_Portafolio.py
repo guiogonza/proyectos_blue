@@ -4,7 +4,10 @@ from domain.services import reporting_service
 import pandas as pd
 
 # apps/dashboard/pages/00_📊_Portafolio.py
-from shared.auth.auth import require_authentication, is_authenticated, hide_sidebar, is_admin, get_user_proyectos
+from shared.auth.auth import require_authentication, is_authenticated, hide_sidebar, is_admin, get_user_proyectos, init_auth
+
+# IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie
+init_auth()
 
 # Ocultar sidebar y redirigir si no está autenticado
 if not is_authenticated():

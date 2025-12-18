@@ -10,9 +10,18 @@ Role = Literal["admin", "editor", "viewer"]
 SESSION_KEY = "auth_user"
 SESSION_TIMEOUT_MINUTES = 30  # Aumentado a 30 minutos
 COOKIE_NAME = "project_ops_auth"
+COOKIE_MANAGER_KEY = "cookie_manager_singleton"
+
+@st.cache_resource
+def _get_cookie_manager():
+    """
+    Singleton del CookieManager usando cache_resource.
+    Esto asegura que solo haya una instancia durante toda la sesión.
+    """
+    return stx.CookieManager()
 
 def get_cookie_manager():
-    return stx.CookieManager(key="auth_cookies")
+    return _get_cookie_manager()
 
 def create_token(user: Dict[str, Any]) -> str:
     payload = {
@@ -32,31 +41,42 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 def start_session(user: Dict[str, Any]) -> None:
+    """
+    Inicia sesión guardando en session_state y cookie.
+    """
     # Cargar proyectos asignados si no es admin
     proyectos = []
     if user.get("rol_app", "").lower() != "admin":
         from domain.services import usuarios_service
         proyectos = usuarios_service.get_proyectos_usuario(user["id"])
     
-    st.session_state[SESSION_KEY] = {
+    user_data = {
         "id": user["id"],
         "email": user["email"],
         "rol_app": user["rol_app"],
-        "proyectos": proyectos,  # Lista de IDs de proyectos asignados
+        "proyectos": proyectos,
         "last_activity": datetime.now().isoformat(),
     }
     
-    # Guardar cookie
+    st.session_state[SESSION_KEY] = user_data
+    
+    # Guardar cookie con JWT
     try:
-        token = create_token(st.session_state[SESSION_KEY])
+        token = create_token(user_data)
         cm = get_cookie_manager()
         cm.set(COOKIE_NAME, token, expires_at=datetime.now() + timedelta(days=7))
     except Exception as e:
         print(f"Error setting cookie: {e}")
 
 def end_session() -> None:
+    """
+    Cierra la sesión eliminando session_state y cookie.
+    """
     if SESSION_KEY in st.session_state:
         del st.session_state[SESSION_KEY]
+    
+    # Marcar que la sesión fue cerrada explícitamente
+    st.session_state["_session_ended"] = True
     
     # Borrar cookie
     try:
@@ -87,21 +107,36 @@ def is_session_expired() -> bool:
         return True
 
 def current_user() -> Optional[Dict[str, Any]]:
-    # 1. Verificar session_state
+    """
+    Obtiene el usuario actual de la sesión.
+    Primero intenta session_state, luego cookie.
+    
+    IMPORTANTE: El CookieManager necesita renderizarse para leer cookies.
+    Por eso usamos cache_resource para mantener una instancia singleton.
+    """
+    
+    # Si la sesión fue cerrada explícitamente en este ciclo, no restaurar
+    if st.session_state.get("_session_ended"):
+        return None
+    
+    # 1. Verificar session_state primero (más rápido)
     if SESSION_KEY in st.session_state:
         if not is_session_expired():
-             renew_session()
-             return st.session_state[SESSION_KEY]
+            renew_session()
+            return st.session_state[SESSION_KEY]
+        else:
+            # Sesión expirada, limpiar
+            del st.session_state[SESSION_KEY]
     
-    # 2. Si no hay sesión válida en memoria, intentar recuperar de cookie
+    # 2. Intentar recuperar de cookie
     try:
         cm = get_cookie_manager()
         token = cm.get(COOKIE_NAME)
         
-        if token:
+        if token and isinstance(token, str) and len(token) > 10:
             payload = decode_token(token)
             if payload:
-                # Restaurar sesión
+                # Restaurar sesión desde cookie
                 user_data = {
                     "id": payload["sub"],
                     "email": payload["email"],
@@ -115,6 +150,40 @@ def current_user() -> Optional[Dict[str, Any]]:
         print(f"Error reading cookie: {e}")
             
     return None
+
+def init_auth():
+    """
+    Inicializa el sistema de autenticación.
+    DEBE llamarse al inicio de cada página para que el CookieManager
+    pueda leer las cookies correctamente.
+    
+    Esta función renderiza el CookieManager (necesario para que funcione)
+    y restaura la sesión si hay una cookie válida.
+    """
+    # Forzar la inicialización del CookieManager
+    cm = get_cookie_manager()
+    
+    # Limpiar el flag de sesión terminada si existe de un ciclo anterior
+    if "_session_ended" in st.session_state:
+        del st.session_state["_session_ended"]
+    
+    # Intentar restaurar sesión desde cookie si no hay sesión activa
+    if SESSION_KEY not in st.session_state:
+        try:
+            token = cm.get(COOKIE_NAME)
+            if token and isinstance(token, str) and len(token) > 10:
+                payload = decode_token(token)
+                if payload:
+                    user_data = {
+                        "id": payload["sub"],
+                        "email": payload["email"],
+                        "rol_app": payload["rol_app"],
+                        "proyectos": payload.get("proyectos", []),
+                        "last_activity": datetime.now().isoformat()
+                    }
+                    st.session_state[SESSION_KEY] = user_data
+        except Exception as e:
+            print(f"Error in init_auth: {e}")
 
 def is_authenticated() -> bool:
     return current_user() is not None

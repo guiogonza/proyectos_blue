@@ -4,7 +4,10 @@ import os
 from datetime import datetime
 from domain.schemas.documentos import DocumentoCreate, DocumentoUpdate
 from domain.services import documentos_service, proyectos_service
-from shared.auth.auth import require_authentication, is_admin, get_user_proyectos, can_edit
+from shared.auth.auth import require_authentication, is_admin, get_user_proyectos, can_edit, init_auth
+
+# IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie
+init_auth()
 
 require_authentication()
 

@@ -4,8 +4,11 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
-from shared.auth.auth import require_authentication, is_authenticated, hide_sidebar
+from shared.auth.auth import require_authentication, is_authenticated, hide_sidebar, init_auth
 from apps.proyectos.main import render
+
+# IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie
+init_auth()
 
 # Ocultar sidebar y redirigir si no está autenticado
 if not is_authenticated():
