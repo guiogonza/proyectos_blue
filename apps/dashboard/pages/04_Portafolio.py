@@ -4,7 +4,7 @@ from domain.services import reporting_service
 import pandas as pd
 
 # apps/dashboard/pages/00_📊_Portafolio.py
-from shared.auth.auth import require_authentication, require_role, is_authenticated, hide_sidebar
+from shared.auth.auth import require_authentication, require_role, is_authenticated, hide_sidebar, is_admin, get_user_proyectos
 
 # Ocultar sidebar y redirigir si no está autenticado
 if not is_authenticated():
@@ -23,8 +23,11 @@ def _money(v: float) -> str:
 
 def render():
     st.title("📊 Portafolio de Proyectos")
+    
+    # Obtener proyectos permitidos para el usuario
+    proyectos_permitidos = get_user_proyectos()
 
-    data = reporting_service.portfolio_overview()
+    data = reporting_service.portfolio_overview(proyecto_ids=proyectos_permitidos if not is_admin() else None)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Proyectos (totales)", data["total"])
@@ -39,7 +42,7 @@ def render():
 
     st.markdown("---")
     st.subheader("Tabla de proyectos con semáforo de desviación")
-    table = reporting_service.cost_table()
+    table = reporting_service.cost_table(proyecto_ids=proyectos_permitidos if not is_admin() else None)
     if table:
         df = pd.DataFrame(table)
         # Columnas formateadas
@@ -53,7 +56,7 @@ def render():
 
     st.markdown("---")
     st.subheader("Top personas por carga activa")
-    top = reporting_service.top_carga_personas(limit=10)
+    top = reporting_service.top_carga_personas(limit=10, proyecto_ids=proyectos_permitidos if not is_admin() else None)
     if top:
         dfp = pd.DataFrame(top)
         st.dataframe(dfp, use_container_width=True, hide_index=True)

@@ -4,6 +4,7 @@ from datetime import date
 from domain.schemas.proyectos import ProyectoCreate, ProyectoUpdate, ProyectoClose, ESTADOS_PROY
 from domain.services import proyectos_service
 from shared.utils.exports import export_csv
+from shared.auth.auth import is_admin, get_user_proyectos
 
 def _header_resumen(items):
     tot = len(items)
@@ -13,6 +14,17 @@ def _header_resumen(items):
     col1.metric("Total", tot)
     col2.metric("Activos", activos)
     col3.metric("Cerrados", cerrados)
+
+def _filtrar_por_usuario(items):
+    """Filtra proyectos según los permisos del usuario"""
+    if is_admin():
+        return items  # Admin ve todos
+    
+    proyectos_permitidos = get_user_proyectos()
+    if not proyectos_permitidos:
+        return []  # Usuario sin proyectos asignados
+    
+    return [p for p in items if p.id in proyectos_permitidos]
 
 def render():
     st.title("📁 Gestión de Proyectos")
@@ -30,6 +42,10 @@ def render():
         search = st.text_input("Buscar por nombre/cliente", "")
 
     items = proyectos_service.listar(estado_val, cliente_val, (search or None))
+    
+    # Filtrar por proyectos del usuario
+    items = _filtrar_por_usuario(items)
+    
     _header_resumen(items)
 
     # Export

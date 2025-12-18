@@ -2,7 +2,7 @@
 import streamlit as st
 import extra_streamlit_components as stx
 import jwt
-from typing import Literal, Optional, Dict, Any
+from typing import Literal, Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from shared.config import settings
 
@@ -19,6 +19,7 @@ def create_token(user: Dict[str, Any]) -> str:
         "sub": str(user["id"]),
         "email": user["email"],
         "rol_app": user["rol_app"],
+        "proyectos": user.get("proyectos", []),
         "exp": datetime.now() + timedelta(days=7)
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
@@ -31,16 +32,23 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 def start_session(user: Dict[str, Any]) -> None:
+    # Cargar proyectos asignados si no es admin
+    proyectos = []
+    if user.get("rol_app", "").lower() != "admin":
+        from domain.services import usuarios_service
+        proyectos = usuarios_service.get_proyectos_usuario(user["id"])
+    
     st.session_state[SESSION_KEY] = {
         "id": user["id"],
         "email": user["email"],
         "rol_app": user["rol_app"],
+        "proyectos": proyectos,  # Lista de IDs de proyectos asignados
         "last_activity": datetime.now().isoformat(),
     }
     
     # Guardar cookie
     try:
-        token = create_token(user)
+        token = create_token(st.session_state[SESSION_KEY])
         cm = get_cookie_manager()
         cm.set(COOKIE_NAME, token, expires_at=datetime.now() + timedelta(days=7))
     except Exception as e:
@@ -98,6 +106,7 @@ def current_user() -> Optional[Dict[str, Any]]:
                     "id": payload["sub"],
                     "email": payload["email"],
                     "rol_app": payload["rol_app"],
+                    "proyectos": payload.get("proyectos", []),
                     "last_activity": datetime.now().isoformat()
                 }
                 st.session_state[SESSION_KEY] = user_data
@@ -109,6 +118,24 @@ def current_user() -> Optional[Dict[str, Any]]:
 
 def is_authenticated() -> bool:
     return current_user() is not None
+
+def is_admin() -> bool:
+    """Verifica si el usuario actual es admin"""
+    u = current_user()
+    if not u:
+        return False
+    return u.get("rol_app", "").lower() == "admin"
+
+def get_user_proyectos() -> List[int]:
+    """Obtiene la lista de proyectos asignados al usuario actual.
+    Si es admin, retorna lista vacía (significa acceso a todos).
+    """
+    u = current_user()
+    if not u:
+        return []
+    if u.get("rol_app", "").lower() == "admin":
+        return []  # Admin ve todo
+    return u.get("proyectos", [])
 
 def has_role(*roles: Role) -> bool:
     u = current_user()

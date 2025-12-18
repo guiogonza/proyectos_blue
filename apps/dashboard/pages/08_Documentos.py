@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from domain.schemas.documentos import DocumentoCreate, DocumentoUpdate
 from domain.services import documentos_service, proyectos_service
-from shared.auth.auth import require_role
+from shared.auth.auth import require_role, is_admin, get_user_proyectos
 
 require_role("admin", "viewer")
 
@@ -15,10 +15,16 @@ st.caption("Carga y gestiona documentos asociados a proyectos")
 UPLOAD_DIR = "uploads/documentos"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Obtener proyectos permitidos para el usuario
+proyectos_permitidos = get_user_proyectos()
+
 # Filtros
 col1, col2 = st.columns([1, 2])
 with col1:
     proyectos = proyectos_service.listar(None, None, None)
+    # Filtrar proyectos si no es admin
+    if not is_admin() and proyectos_permitidos:
+        proyectos = [p for p in proyectos if p.id in proyectos_permitidos]
     proyecto_opts = {f"{p.id} - {p.NOMBRE}": p.id for p in proyectos}
     proyecto_filter = st.selectbox("Filtrar por Proyecto", ["(Todos)"] + list(proyecto_opts.keys()))
     proyecto_id_filter = None if proyecto_filter == "(Todos)" else proyecto_opts[proyecto_filter]
@@ -28,6 +34,11 @@ with col2:
 
 # Listar documentos
 items = documentos_service.listar(proyecto_id=proyecto_id_filter, search=(search or None))
+
+# Filtrar por proyectos del usuario si no es admin
+if not is_admin() and proyectos_permitidos:
+    items = [d for d in items if d.proyecto_id in proyectos_permitidos]
+
 st.success(f"Total: {len(items)} documento(s)")
 
 # URL base de la API para documentos

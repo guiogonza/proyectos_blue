@@ -3,10 +3,19 @@ from datetime import date
 from domain.schemas.sprints import SprintCreate, SprintUpdate, SprintClose
 from domain.services import sprints_service, proyectos_service
 from shared.utils.exports import export_csv
+from shared.auth.auth import is_admin, get_user_proyectos
 
 def _proyectos_opts():
     rows = proyectos_service.listar(None, None, None)
-    return {f"{r.id} - {r.NOMBRE} ({r.ESTADO})": r.id for r in rows}
+    proyectos_permitidos = get_user_proyectos()
+    
+    options = {}
+    for r in rows:
+        # Si no es admin, filtrar por proyectos permitidos
+        if not is_admin() and proyectos_permitidos and r.id not in proyectos_permitidos:
+            continue
+        options[f"{r.id} - {r.NOMBRE} ({r.ESTADO})"] = r.id
+    return options
 
 def render():
     st.title("🗓️ Sprints por proyecto")
@@ -20,6 +29,13 @@ def render():
     search = st.text_input("Buscar por nombre")
 
     items = sprints_service.listar(proyecto_id, estado_v, (search or None))
+    
+    # Filtrar por proyectos del usuario si no es admin
+    if not is_admin():
+        proyectos_permitidos = get_user_proyectos()
+        if proyectos_permitidos:
+            items = [i for i in items if i.proyecto_id in proyectos_permitidos]
+    
     st.success(f"{len(items)} sprint(s)")
 
     if st.button("📤 Exportar CSV"):

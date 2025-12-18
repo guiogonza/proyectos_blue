@@ -39,3 +39,21 @@ def eliminar(user_id: int) -> None:
     if not usuario:
         raise ValueError("Usuario no encontrado.")
     usuarios_repo.delete_user(user_id)
+
+# ==================== GESTIÓN DE PROYECTOS POR USUARIO ====================
+
+def get_proyectos_usuario(usuario_id: int) -> List[int]:
+    """Obtiene la lista de IDs de proyectos asignados a un usuario"""
+    return usuarios_repo.get_proyectos_usuario(usuario_id)
+
+def set_proyectos_usuario(usuario_id: int, proyecto_ids: List[int]) -> None:
+    """Asigna proyectos a un usuario (reemplaza todos)"""
+    usuarios_repo.set_proyectos_usuario(usuario_id, proyecto_ids)
+
+def asignar_proyecto(usuario_id: int, proyecto_id: int) -> None:
+    """Asigna un proyecto a un usuario"""
+    usuarios_repo.asignar_proyecto_usuario(usuario_id, proyecto_id)
+
+def desasignar_proyecto(usuario_id: int, proyecto_id: int) -> None:
+    """Quita un proyecto de un usuario"""
+    usuarios_repo.desasignar_proyecto_usuario(usuario_id, proyecto_id)

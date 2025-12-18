@@ -1,13 +1,17 @@
 # apps/usuarios/main.py
 import streamlit as st
 from domain.schemas.usuarios import UsuarioCreate, UsuarioUpdate
-from domain.services import usuarios_service
+from domain.services import usuarios_service, proyectos_service
 from infra.repositories import personas_repo
 from shared.utils.exports import export_csv
 
 def _personas_opts():
     rows = personas_repo.list_personas(None, True, None)
     return {"(Sin persona ligada)": None, **{f"{r['id']} - {r['nombre']} ({r['ROL_PRINCIPAL']})": r["id"] for r in rows}}
+
+def _proyectos_opts():
+    proyectos = proyectos_service.listar(None, None, None)
+    return {f"{p.id} - {p.NOMBRE}": p.id for p in proyectos}
 
 def render():
     st.title("🔑 Gestión de Usuarios (admin)")
@@ -30,9 +34,9 @@ def render():
         st.info("No hay usuarios.")
 
     st.markdown("---")
-    st.subheader("➡️ Crear / ✏️ Editar / 🔁 Reset contraseña / 🗑️ Eliminar")
+    st.subheader("➡️ Crear / ✏️ Editar / � Asignar Proyectos / 🔁 Reset contraseña / 🗑️ Eliminar")
 
-    tab_crear, tab_edit, tab_reset, tab_delete = st.tabs(["Crear", "Editar", "Reset contraseña", "Eliminar"])
+    tab_crear, tab_edit, tab_proyectos, tab_reset, tab_delete = st.tabs(["Crear", "Editar", "Asignar Proyectos", "Reset contraseña", "Eliminar"])
 
     with tab_crear:
         with st.form("form_user_create", clear_on_submit=True):
@@ -71,6 +75,50 @@ def render():
                         st.rerun()
                     except Exception as e:
                         st.error(str(e))
+
+    with tab_proyectos:
+        st.info("📁 Asigna proyectos a usuarios tipo 'viewer'. Los usuarios admin tienen acceso a todos los proyectos automáticamente.")
+        
+        # Filtrar solo usuarios viewer
+        usuarios_viewer = [i for i in items if i.rol_app.lower() == "viewer"]
+        
+        if not usuarios_viewer:
+            st.warning("No hay usuarios con rol 'viewer'. Los usuarios admin ya tienen acceso a todos los proyectos.")
+        else:
+            opt_user = {f"{i.id} - {i.email}": i for i in usuarios_viewer}
+            sel_user_k = st.selectbox("Selecciona usuario", list(opt_user.keys()), key="proyectos_user_select")
+            sel_user = opt_user[sel_user_k]
+            
+            # Obtener proyectos actuales del usuario
+            proyectos_actuales = usuarios_service.get_proyectos_usuario(sel_user.id)
+            
+            # Obtener todos los proyectos
+            proy_opts = _proyectos_opts()
+            
+            if not proy_opts:
+                st.warning("No hay proyectos creados aún.")
+            else:
+                st.caption(f"Proyectos actualmente asignados: {len(proyectos_actuales)}")
+                
+                # Multiselect para asignar proyectos
+                proy_labels_actuales = [k for k, v in proy_opts.items() if v in proyectos_actuales]
+                
+                with st.form("form_asignar_proyectos"):
+                    proyectos_seleccionados = st.multiselect(
+                        "Proyectos asignados",
+                        options=list(proy_opts.keys()),
+                        default=proy_labels_actuales,
+                        help="Selecciona los proyectos a los que este usuario tendrá acceso"
+                    )
+                    
+                    if st.form_submit_button("💾 Guardar asignación"):
+                        try:
+                            proyecto_ids = [proy_opts[lbl] for lbl in proyectos_seleccionados]
+                            usuarios_service.set_proyectos_usuario(sel_user.id, proyecto_ids)
+                            st.success(f"Proyectos asignados: {len(proyecto_ids)}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(str(e))
 
     with tab_reset:
         if not items:

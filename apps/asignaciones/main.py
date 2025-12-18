@@ -6,6 +6,7 @@ from domain.schemas.asignaciones import AsignacionCreate, AsignacionUpdate, Asig
 from domain.services import asignaciones_service
 from infra.repositories import proyectos_repo, personas_repo, sprints_repo
 from shared.utils.exports import export_csv
+from shared.auth.auth import is_admin, get_user_proyectos
 
 def _personas_options():
     rows = personas_repo.list_personas(None, True, None)
@@ -13,7 +14,16 @@ def _personas_options():
 
 def _proyectos_options():
     rows = proyectos_repo.list_proyectos(estado=None, cliente=None, search=None)
-    return {f"{r['id']} - {r['NOMBRE']} ({r['ESTADO']})": r["id"] for r in rows if r["ESTADO"] != "Cerrado"}
+    proyectos_permitidos = get_user_proyectos()
+    
+    options = {}
+    for r in rows:
+        if r["ESTADO"] != "Cerrado":
+            # Si no es admin, filtrar por proyectos permitidos
+            if not is_admin() and proyectos_permitidos and r["id"] not in proyectos_permitidos:
+                continue
+            options[f"{r['id']} - {r['NOMBRE']} ({r['ESTADO']})"] = r["id"]
+    return options
 
 def _sprints_options(proyecto_id: Optional[int] = None):
     """Obtiene opciones de sprints, filtrados por proyecto si se especifica"""
@@ -41,6 +51,13 @@ def _clean_items_for_display(items):
 
 def _assignments_table(persona_id: Optional[int], proyecto_id: Optional[int], solo_activas: Optional[bool]):
     items = asignaciones_service.listar(persona_id, proyecto_id, solo_activas)
+    
+    # Filtrar por proyectos del usuario si no es admin
+    if not is_admin():
+        proyectos_permitidos = get_user_proyectos()
+        if proyectos_permitidos:
+            items = [i for i in items if i.proyecto_id in proyectos_permitidos]
+    
     if items:
         # Excluir persona_id y proyecto_id de la visualizaci�n, mantener solo nombres
         display_items = _clean_items_for_display(items)
