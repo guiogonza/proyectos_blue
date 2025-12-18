@@ -1,0 +1,174 @@
+# apps/dashboard/pages/08_Documentos.py
+import streamlit as st
+import os
+from datetime import datetime
+from domain.schemas.documentos import DocumentoCreate, DocumentoUpdate
+from domain.services import documentos_service, proyectos_service
+from shared.auth.auth import require_role
+
+require_role("admin", "viewer")
+
+st.title("📎 Gestión de Documentos")
+st.caption("Carga y gestiona documentos asociados a proyectos")
+
+# Crear directorio de uploads si no existe
+UPLOAD_DIR = "uploads/documentos"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Filtros
+col1, col2 = st.columns([1, 2])
+with col1:
+    proyectos = proyectos_service.listar(None, None, None)
+    proyecto_opts = {f"{p.id} - {p.NOMBRE}": p.id for p in proyectos}
+    proyecto_filter = st.selectbox("Filtrar por Proyecto", ["(Todos)"] + list(proyecto_opts.keys()))
+    proyecto_id_filter = None if proyecto_filter == "(Todos)" else proyecto_opts[proyecto_filter]
+
+with col2:
+    search = st.text_input("Buscar por nombre o descripción", placeholder="Buscar...")
+
+# Listar documentos
+items = documentos_service.listar(proyecto_id=proyecto_id_filter, search=(search or None))
+st.success(f"Total: {len(items)} documento(s)")
+
+if items:
+    # Preparar datos para mostrar
+    display_data = []
+    for doc in items:
+        # Formatear tamaño
+        if doc.tamanio_bytes:
+            if doc.tamanio_bytes < 1024:
+                size_str = f"{doc.tamanio_bytes} B"
+            elif doc.tamanio_bytes < 1024 * 1024:
+                size_str = f"{doc.tamanio_bytes / 1024:.1f} KB"
+            else:
+                size_str = f"{doc.tamanio_bytes / (1024 * 1024):.1f} MB"
+        else:
+            size_str = "N/A"
+        
+        display_data.append({
+            "ID": doc.id,
+            "Proyecto": doc.proyecto_nombre or f"ID {doc.proyecto_id}",
+            "Nombre Archivo": doc.nombre_archivo,
+            "Descripción": doc.descripcion or "",
+            "Tamaño": size_str,
+            "Tipo": doc.tipo_mime or "N/A",
+            "Fecha Carga": doc.fecha_carga.strftime("%Y-%m-%d %H:%M:%S")
+        })
+    
+    st.dataframe(display_data, use_container_width=True, hide_index=True)
+else:
+    st.info("No hay documentos con los filtros seleccionados.")
+
+st.markdown("---")
+st.subheader("➕ Subir / ✏️ Editar / 🗑️ Eliminar")
+
+tab_upload, tab_edit, tab_delete = st.tabs(["Subir Documento", "Editar", "Eliminar"])
+
+with tab_upload:
+    st.info("📤 Puedes subir múltiples archivos a la vez")
+    
+    with st.form("form_upload", clear_on_submit=True):
+        # Selector de proyecto
+        proyecto_sel = st.selectbox("Proyecto *", list(proyecto_opts.keys()), key="upload_proyecto")
+        proyecto_id_sel = proyecto_opts[proyecto_sel]
+        
+        # Descripción general
+        descripcion = st.text_area("Descripción", placeholder="Descripción general de los documentos", height=80)
+        
+        # Upload de archivos
+        uploaded_files = st.file_uploader(
+            "Selecciona archivo(s)",
+            accept_multiple_files=True,
+            help="Puedes seleccionar múltiples archivos"
+        )
+        
+        if st.form_submit_button("📤 Subir Documento(s)"):
+            if not uploaded_files:
+                st.error("Debes seleccionar al menos un archivo")
+            else:
+                success_count = 0
+                error_count = 0
+                
+                for uploaded_file in uploaded_files:
+                    try:
+                        # Generar nombre único para evitar conflictos
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        filename_safe = uploaded_file.name.replace(" ", "_")
+                        file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{filename_safe}")
+                        
+                        # Guardar archivo
+                        with open(file_path, "wb") as f:
+                            f.write(uploaded_file.getbuffer())
+                        
+                        # Crear registro en BD
+                        dto = DocumentoCreate(
+                            proyecto_id=proyecto_id_sel,
+                            nombre_archivo=uploaded_file.name,
+                            descripcion=descripcion.strip() if descripcion.strip() else None,
+                            ruta_archivo=file_path,
+                            tamanio_bytes=uploaded_file.size,
+                            tipo_mime=uploaded_file.type
+                        )
+                        documentos_service.crear(dto)
+                        success_count += 1
+                        
+                    except Exception as e:
+                        error_count += 1
+                        st.error(f"Error al subir '{uploaded_file.name}': {str(e)}")
+                
+                if success_count > 0:
+                    st.success(f"✅ {success_count} archivo(s) subido(s) exitosamente")
+                    st.rerun()
+                if error_count > 0:
+                    st.warning(f"⚠️ {error_count} archivo(s) fallaron")
+
+with tab_edit:
+    if not items:
+        st.info("No hay documentos para editar.")
+    else:
+        options = {f"{d.id} - {d.nombre_archivo} ({d.proyecto_nombre})": d for d in items}
+        sel_key = st.selectbox("Selecciona documento", list(options.keys()), key="edit_select")
+        sel = options[sel_key]
+        
+        with st.form("form_edit"):
+            nombre_e = st.text_input("Nombre del archivo", sel.nombre_archivo)
+            desc_e = st.text_area("Descripción", sel.descripcion or "", height=100)
+            
+            st.caption(f"📁 Ruta: {sel.ruta_archivo}")
+            st.caption(f"📅 Subido: {sel.fecha_carga.strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            if st.form_submit_button("💾 Guardar cambios"):
+                try:
+                    dto = DocumentoUpdate(
+                        id=sel.id,
+                        nombre_archivo=nombre_e.strip(),
+                        descripcion=desc_e.strip() if desc_e.strip() else None
+                    )
+                    documentos_service.actualizar(dto)
+                    st.success("Cambios guardados")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
+with tab_delete:
+    st.warning("⚠️ **Advertencia**: Esta acción eliminará permanentemente el documento del servidor.")
+    
+    if not items:
+        st.info("No hay documentos para eliminar.")
+    else:
+        options_del = {f"{d.id} - {d.nombre_archivo} ({d.proyecto_nombre})": d for d in items}
+        sel_del = options_del[st.selectbox("Selecciona documento a eliminar", list(options_del.keys()), key="delete_select")]
+        
+        st.error(f"Vas a eliminar: **{sel_del.nombre_archivo}**")
+        st.caption(f"Proyecto: {sel_del.proyecto_nombre}")
+        st.caption(f"Subido: {sel_del.fecha_carga.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        confirmar = st.checkbox("Confirmo que deseo eliminar este documento", key="confirm_delete")
+        
+        if st.button("🗑️ Eliminar permanentemente", type="primary", disabled=not confirmar):
+            try:
+                documentos_service.eliminar(sel_del.id)
+                st.success(f"Documento '{sel_del.nombre_archivo}' eliminado exitosamente")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error al eliminar: {str(e)}")

@@ -43,6 +43,9 @@ env/
 # Docker volumes
 mysql_data/
 
+# Uploaded files
+uploads/
+
 # Logs
 *.log
 
