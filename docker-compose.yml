@@ -55,6 +55,7 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
+      - uploads_data:/app/uploads
     environment:
       - PYTHONPATH=/app
       - TZ=${TZ:-America/Bogota}

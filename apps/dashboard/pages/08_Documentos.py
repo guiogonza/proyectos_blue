@@ -98,7 +98,10 @@ st.subheader("➕ Subir / ✏️ Editar / 🗑️ Eliminar")
 tab_upload, tab_edit, tab_delete = st.tabs(["Subir Documento", "Editar", "Eliminar"])
 
 with tab_upload:
-    st.info("📤 Puedes subir múltiples archivos a la vez")
+    st.info("📤 Puedes subir múltiples archivos a la vez (máximo 10 MB por archivo)")
+    
+    MAX_FILE_SIZE_MB = 10
+    MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
     
     with st.form("form_upload", clear_on_submit=True):
         # Selector de proyecto
@@ -124,6 +127,12 @@ with tab_upload:
                 
                 for uploaded_file in uploaded_files:
                     try:
+                        # Validar tamaño máximo
+                        if uploaded_file.size > MAX_FILE_SIZE_BYTES:
+                            st.error(f"❌ '{uploaded_file.name}' excede el límite de {MAX_FILE_SIZE_MB} MB ({uploaded_file.size / (1024*1024):.1f} MB)")
+                            error_count += 1
+                            continue
+                        
                         # Generar nombre único para evitar conflictos
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
                         filename_safe = uploaded_file.name.replace(" ", "_")

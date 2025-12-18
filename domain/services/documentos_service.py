@@ -29,5 +29,11 @@ def listar(proyecto_id: Optional[int] = None, search: Optional[str] = None) -> L
     rows = documentos_repo.list_documentos(proyecto_id, search)
     return [DocumentoListItem(**r) for r in rows]
 
+def obtener(doc_id: int) -> Optional[DocumentoListItem]:
+    doc = documentos_repo.get_documento(doc_id)
+    if doc:
+        return DocumentoListItem(**doc)
+    return None
+
 def contar_por_proyecto(proyecto_id: int) -> int:
     return documentos_repo.count_by_proyecto(proyecto_id)
