@@ -5,17 +5,17 @@ from domain.schemas.proyectos import ProyectoCreate, ProyectoUpdate, ProyectoClo
 from infra.repositories import proyectos_repo, personas_repo
 
 def crear(dto: ProyectoCreate) -> int:
-    if proyectos_repo.exists_nombre(dto.nombre):
+    if proyectos_repo.exists_nombre(dto.NOMBRE):
         raise ValueError("Ya existe un proyecto con ese nombre.")
     return proyectos_repo.create_proyecto(dto.dict())
 
 def actualizar(dto: ProyectoUpdate) -> None:
-    if proyectos_repo.exists_nombre(dto.nombre, exclude_id=dto.id):
+    if proyectos_repo.exists_nombre(dto.NOMBRE, exclude_id=dto.id):
         raise ValueError("Ya existe otro proyecto con ese nombre.")
     proyectos_repo.update_proyecto(dto.id, dto.dict(exclude={"id"}))
 
 def cerrar(dto: ProyectoClose) -> None:
-    proyectos_repo.close_proyecto(dto.id, dto.costo_real_total)
+    proyectos_repo.close_proyecto(dto.id, dto.COSTO_REAL_TOTAL)
 
 def listar(estado: Optional[str] = None, cliente: Optional[str] = None, search: Optional[str] = None) -> List[ProyectoListItem]:
     rows = proyectos_repo.list_proyectos(estado, cliente, search)

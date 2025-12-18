@@ -7,24 +7,30 @@ from datetime import date
 ESTADOS_PROY = ["Borrador", "Activo", "En pausa", "Cerrado"]
 
 class ProyectoCreate(BaseModel):
-    nombre: str = Field(min_length=2, max_length=200)
+    NOMBRE: str = Field(min_length=2, max_length=200)
     cliente: Optional[str] = Field(default=None, max_length=200)
     pm_id: Optional[int] = None
-    fecha_inicio: date
-    fecha_fin_planeada: date
-    estado: str = "Borrador"
-    costo_estimado_total: float = Field(ge=0)
-    descripcion: Optional[str] = None  # opcional, si la quieres
+    FECHA_INICIO: date
+    FECHA_FIN_ESTIMADA: date
+    ESTADO: str = "Borrador"
+    BUDGET: float = Field(ge=0)
+    descripcion: Optional[str] = None
+    PAIS: Optional[str] = Field(default=None, max_length=100)
+    CATEGORIA: Optional[str] = Field(default=None, max_length=100)
+    LIDER_BLUETAB: Optional[str] = Field(default=None, max_length=200)
+    LIDER_CLIENTE: Optional[str] = Field(default=None, max_length=200)
+    FECHA_FIN: Optional[date] = None
+    MANAGER_BLUETAB: Optional[str] = Field(default=None, max_length=200)
 
-    @validator("estado")
+    @validator("ESTADO")
     def _estado(cls, v):
         if v not in ESTADOS_PROY: raise ValueError(f"Estado inválido: {v}")
         return v
 
-    @validator("fecha_fin_planeada")
+    @validator("FECHA_FIN_ESTIMADA")
     def _fechas(cls, v, values):
-        fi = values.get("fecha_inicio")
-        if fi and v < fi: raise ValueError("La fecha fin planeada no puede ser anterior a inicio.")
+        fi = values.get("FECHA_INICIO")
+        if fi and v < fi: raise ValueError("La fecha fin estimada no puede ser anterior a inicio.")
         return v
 
 class ProyectoUpdate(ProyectoCreate):
@@ -32,15 +38,21 @@ class ProyectoUpdate(ProyectoCreate):
 
 class ProyectoClose(BaseModel):
     id: int
-    costo_real_total: float = Field(ge=0)
+    COSTO_REAL_TOTAL: float = Field(ge=0)
 
 class ProyectoListItem(BaseModel):
     id: int
-    nombre: str
+    NOMBRE: str
     cliente: Optional[str]
     pm_id: Optional[int]
-    fecha_inicio: date
-    fecha_fin_planeada: date
-    estado: str
-    costo_estimado_total: float
-    costo_real_total: Optional[float]
+    FECHA_INICIO: date
+    FECHA_FIN_ESTIMADA: date
+    ESTADO: str
+    BUDGET: float
+    COSTO_REAL_TOTAL: Optional[float]
+    PAIS: Optional[str] = None
+    CATEGORIA: Optional[str] = None
+    LIDER_BLUETAB: Optional[str] = None
+    LIDER_CLIENTE: Optional[str] = None
+    FECHA_FIN: Optional[date] = None
+    MANAGER_BLUETAB: Optional[str] = None

@@ -29,7 +29,7 @@ def _log_event(conn, tipo: str, entidad: str, entidad_id: int,
             )
 
 def exists_nombre(nombre: str, exclude_id: Optional[int] = None) -> bool:
-    sql = "SELECT id FROM proyectos WHERE nombre=%s"
+    sql = "SELECT id FROM proyectos WHERE NOMBRE=%s"
     params = [nombre]
     if exclude_id:
         sql += " AND id<>%s"; params.append(exclude_id)
@@ -41,36 +41,42 @@ def create_proyecto(data: Dict[str, Any]) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
             """INSERT INTO proyectos
-               (nombre, cliente, pm_id, fecha_inicio, fecha_fin_planeada, estado, costo_estimado_total, costo_real_total, baseline_fecha)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,NULL,NOW())""",
-            (data["nombre"], data.get("cliente"), data.get("pm_id"),
-             data["fecha_inicio"], data["fecha_fin_planeada"],
-             data["estado"], data["costo_estimado_total"])
+               (NOMBRE, cliente, pm_id, FECHA_INICIO, FECHA_FIN_ESTIMADA, ESTADO, BUDGET, COSTO_REAL_TOTAL, baseline_fecha,
+                PAIS, CATEGORIA, LIDER_BLUETAB, LIDER_CLIENTE, FECHA_FIN, MANAGER_BLUETAB)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,NULL,NOW(),%s,%s,%s,%s,%s,%s)""",
+            (data["NOMBRE"], data.get("cliente"), data.get("pm_id"),
+             data["FECHA_INICIO"], data["FECHA_FIN_ESTIMADA"],
+             data["ESTADO"], data["BUDGET"],
+             data.get("PAIS"), data.get("CATEGORIA"), data.get("LIDER_BLUETAB"),
+             data.get("LIDER_CLIENTE"), data.get("FECHA_FIN"), data.get("MANAGER_BLUETAB"))
         )
         pid = cur.lastrowid
-        _log_event(conn, "create", "proyectos", pid, {"nombre": data["nombre"], "estado": data["estado"]})
+        _log_event(conn, "create", "proyectos", pid, {"NOMBRE": data["NOMBRE"], "ESTADO": data["ESTADO"]})
         return pid
 
 def update_proyecto(pid: int, data: Dict[str, Any]) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
             """UPDATE proyectos
-               SET nombre=%s, cliente=%s, pm_id=%s, fecha_inicio=%s, fecha_fin_planeada=%s,
-                   estado=%s, costo_estimado_total=%s
+               SET NOMBRE=%s, cliente=%s, pm_id=%s, FECHA_INICIO=%s, FECHA_FIN_ESTIMADA=%s,
+                   ESTADO=%s, BUDGET=%s, PAIS=%s, CATEGORIA=%s, LIDER_BLUETAB=%s,
+                   LIDER_CLIENTE=%s, FECHA_FIN=%s, MANAGER_BLUETAB=%s
                WHERE id=%s""",
-            (data["nombre"], data.get("cliente"), data.get("pm_id"),
-             data["fecha_inicio"], data["fecha_fin_planeada"],
-             data["estado"], data["costo_estimado_total"], pid)
+            (data["NOMBRE"], data.get("cliente"), data.get("pm_id"),
+             data["FECHA_INICIO"], data["FECHA_FIN_ESTIMADA"],
+             data["ESTADO"], data["BUDGET"],
+             data.get("PAIS"), data.get("CATEGORIA"), data.get("LIDER_BLUETAB"),
+             data.get("LIDER_CLIENTE"), data.get("FECHA_FIN"), data.get("MANAGER_BLUETAB"), pid)
         )
-        _log_event(conn, "update", "proyectos", pid, {"nombre": data["nombre"], "estado": data["estado"]})
+        _log_event(conn, "update", "proyectos", pid, {"NOMBRE": data["NOMBRE"], "ESTADO": data["ESTADO"]})
 
-def close_proyecto(pid: int, costo_real_total: float) -> None:
+def close_proyecto(pid: int, COSTO_REAL_TOTAL: float) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "UPDATE proyectos SET estado='Cerrado', costo_real_total=%s WHERE id=%s",
-            (costo_real_total, pid)
+            "UPDATE proyectos SET ESTADO='Cerrado', COSTO_REAL_TOTAL=%s WHERE id=%s",
+            (COSTO_REAL_TOTAL, pid)
         )
-        _log_event(conn, "close", "proyectos", pid, {"costo_real_total": costo_real_total})
+        _log_event(conn, "close", "proyectos", pid, {"COSTO_REAL_TOTAL": COSTO_REAL_TOTAL})
 
 def get_proyecto(pid: int) -> Optional[Dict[str, Any]]:
     with get_conn() as conn, conn.cursor() as cur:
@@ -96,13 +102,13 @@ def delete_proyecto(pid: int) -> None:
 def list_proyectos(estado: Optional[str] = None, cliente: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
     sql = "SELECT * FROM proyectos"
     where, params = [], []
-    if estado: where.append("estado=%s"); params.append(estado)
+    if estado: where.append("ESTADO=%s"); params.append(estado)
     if cliente: where.append("cliente=%s"); params.append(cliente)
     if search:
-        where.append("(nombre LIKE %s OR cliente LIKE %s)")
+        where.append("(NOMBRE LIKE %s OR cliente LIKE %s)")
         like = f"%{search}%"; params.extend([like, like])
     if where: sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY created_at DESC, nombre ASC"
+    sql += " ORDER BY created_at DESC, NOMBRE ASC"
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(sql, tuple(params))
         return cur.fetchall()
