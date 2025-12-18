@@ -33,7 +33,11 @@ def init_session_from_cookie() -> None:
     if cookies is None:
         return
     
-    if not cookies.ready():
+    try:
+        if not cookies.ready():
+            return
+    except:
+        # Si falla al verificar ready(), continuar sin cookies
         return
     
     # Si ya hay sesión en memory, no hacer nada
@@ -41,9 +45,9 @@ def init_session_from_cookie() -> None:
         return
     
     # Intentar restaurar desde cookie
-    cookie_data = cookies.get(COOKIE_KEY)
-    if cookie_data:
-        try:
+    try:
+        cookie_data = cookies.get(COOKIE_KEY)
+        if cookie_data:
             user_data = json.loads(cookie_data)
             # Verificar expiración
             last_activity = datetime.fromisoformat(user_data.get("last_activity", ""))
@@ -55,21 +59,27 @@ def init_session_from_cookie() -> None:
                 # Renovar timestamp
                 renew_session()
                 save_session_to_cookie()
-        except (json.JSONDecodeError, ValueError, TypeError, KeyError):
-            # Cookie corrupta, eliminar
-            cookies[COOKIE_KEY] = ""
-            cookies.save()
+    except (json.JSONDecodeError, ValueError, TypeError, KeyError, Exception):
+        # Cookie corrupta o error, continuar sin cookies
+        pass
 
 def save_session_to_cookie() -> None:
     """Guarda la sesión actual en una cookie."""
     cookies = get_cookie_manager()
-    if cookies is None or not cookies.ready():
+    if cookies is None:
         return
     
-    if SESSION_KEY in st.session_state:
-        cookie_data = json.dumps(st.session_state[SESSION_KEY])
-        cookies[COOKIE_KEY] = cookie_data
-        cookies.save()
+    try:
+        if not cookies.ready():
+            return
+        
+        if SESSION_KEY in st.session_state:
+            cookie_data = json.dumps(st.session_state[SESSION_KEY])
+            cookies[COOKIE_KEY] = cookie_data
+            cookies.save()
+    except:
+        # Si falla, continuar sin guardar en cookie
+        pass
 
 def start_session(user: Dict[str, Any]) -> None:
     st.session_state[SESSION_KEY] = {
@@ -85,10 +95,14 @@ def end_session() -> None:
         del st.session_state[SESSION_KEY]
     
     # Eliminar cookie
-    cookies = get_cookie_manager()
-    if cookies and cookies.ready():
-        cookies[COOKIE_KEY] = ""
-        cookies.save()
+    try:
+        cookies = get_cookie_manager()
+        if cookies and cookies.ready():
+            cookies[COOKIE_KEY] = ""
+            cookies.save()
+    except:
+        # Si falla, continuar
+        pass
 
 def renew_session() -> None:
     """Renueva el timestamp de última actividad."""
