@@ -9,7 +9,7 @@ def start_session(user: Dict[str, Any]) -> None:
     st.session_state[SESSION_KEY] = {
         "id": user["id"],
         "email": user["email"],
-        "rol": user["rol_app"],
+        "rol_app": user["rol_app"],
     }
 
 def end_session() -> None:
@@ -26,7 +26,7 @@ def has_role(*roles: Role) -> bool:
     u = current_user()
     if not u:
         return False
-    user_role = u.get("rol", "").lower()
+    user_role = u.get("rol_app", "").lower()
     return user_role in [r.lower() for r in roles]
 
 def require_role(*roles: Role, login_page_name: str = "00_Login") -> None:
