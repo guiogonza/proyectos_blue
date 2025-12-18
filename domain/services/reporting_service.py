@@ -11,14 +11,14 @@ def _thresholds() -> Tuple[float, float]:
 def portfolio_overview() -> Dict[str, Any]:
     rows = proyectos_repo.list_proyectos(estado=None, cliente=None, search=None)
     tot = len(rows)
-    activos  = sum(1 for r in rows if r["estado"] == "Activo")
-    cerrados = sum(1 for r in rows if r["estado"] == "Cerrado")
-    suma_est = sum(float(r["costo_estimado_total"] or 0) for r in rows)
-    suma_real= sum(float(r["costo_real_total"] or 0)    for r in rows if r["costo_real_total"] is not None)
+    activos  = sum(1 for r in rows if r["ESTADO"] == "Activo")
+    cerrados = sum(1 for r in rows if r["ESTADO"] == "Cerrado")
+    suma_est = sum(float(r["BUDGET"] or 0) for r in rows)
+    suma_real= sum(float(r["COSTO_REAL_TOTAL"] or 0)    for r in rows if r["COSTO_REAL_TOTAL"] is not None)
     amber, red = _thresholds()
     # desviación promedio solo sobre proyectos cerrados con real
-    desv_vals = [desviacion_pct(r["costo_real_total"], r["costo_estimado_total"])
-                 for r in rows if r["costo_real_total"] is not None and r["costo_estimado_total"]]
+    desv_vals = [desviacion_pct(r["COSTO_REAL_TOTAL"], r["BUDGET"])
+                 for r in rows if r["COSTO_REAL_TOTAL"] is not None and r["BUDGET"]]
     desv_avg = sum(desv_vals)/len(desv_vals) if desv_vals else 0.0
     return {
         "total": tot,
@@ -39,14 +39,14 @@ def cost_table() -> List[Dict[str, Any]]:
     rows = proyectos_repo.list_proyectos(estado=None, cliente=None, search=None)
     out = []
     for r in rows:
-        est = float(r["costo_estimado_total"] or 0)
-        real = float(r["costo_real_total"] or 0) if r["costo_real_total"] is not None else None
+        est = float(r["BUDGET"] or 0)
+        real = float(r["COSTO_REAL_TOTAL"] or 0) if r["COSTO_REAL_TOTAL"] is not None else None
         desv = desviacion_pct(real, est) if real is not None else 0.0
         out.append({
             "id": r["id"],
-            "nombre": r["nombre"],
+            "nombre": r["NOMBRE"],
             "cliente": r.get("cliente"),
-            "estado": r["estado"],
+            "estado": r["ESTADO"],
             "estimado": est,
             "real": real,
             "desviacion_pct": desv,
