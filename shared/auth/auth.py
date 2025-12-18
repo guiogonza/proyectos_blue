@@ -15,17 +15,29 @@ SESSION_KEY = "auth_user"
 COOKIE_KEY = "project_ops_session"
 SESSION_TIMEOUT_MINUTES = 10
 
-# Inicializar cookie manager (solo una vez)
-@st.cache_resource
+# Variable global para almacenar el cookie manager
+_cookie_manager = None
+
 def get_cookie_manager():
+    """Obtiene o crea el cookie manager (sin cache)."""
+    global _cookie_manager
+    
+    if _cookie_manager is not None:
+        return _cookie_manager
+    
     if EncryptedCookieManager is None:
         return None
-    # Usar una clave secreta fija para encriptar cookies
-    cookie_password = "project_ops_secret_key_2025"
-    return EncryptedCookieManager(
-        prefix="project_ops_",
-        password=cookie_password
-    )
+    
+    try:
+        # Usar una clave secreta fija para encriptar cookies
+        cookie_password = "project_ops_secret_key_2025"
+        _cookie_manager = EncryptedCookieManager(
+            prefix="project_ops_",
+            password=cookie_password
+        )
+        return _cookie_manager
+    except:
+        return None
 
 def init_session_from_cookie() -> None:
     """Restaura la sesión desde la cookie si existe y es válida."""
