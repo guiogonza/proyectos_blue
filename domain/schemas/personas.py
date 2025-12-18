@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, validator
 
 ROLES_PERMITIDOS = ["PM", "Desarrollador", "Analista", "QA", "DevOps", "Data", "Soporte"]
 SENIORITY_PERMITIDOS = ["Junior", "Semi-Senior", "Senior", "Lead", "Principal"]
-TIPOS_DOCUMENTO = ["Cédula", "Pasaporte", "DNI", "Otro"]
+TIPOS_DOCUMENTO_PERMITIDOS = ["Cédula", "Pasaporte", "DNI", "Otro"]
 
 class PersonaCreate(BaseModel):
     nombre: str = Field(min_length=2, max_length=200)
@@ -33,8 +33,8 @@ class PersonaCreate(BaseModel):
     
     @validator("TIPO_DOCUMENTO")
     def validar_tipo_documento(cls, v):
-        if v and v not in TIPOS_DOCUMENTO:
-            raise ValueError(f"Tipo de documento inválido. Usa uno de: {', '.join(TIPOS_DOCUMENTO)}")
+        if v and v not in TIPOS_DOCUMENTO_PERMITIDOS:
+            raise ValueError(f"Tipo de documento inválido. Usa uno de: {', '.join(TIPOS_DOCUMENTO_PERMITIDOS)}")
         return v
     
     @validator("correo")
