@@ -15,7 +15,7 @@ with col2:
     if is_authenticated():
         u = current_user()
         if u:  # Verificar que el usuario no sea None
-            st.caption(f"🔓 {u['email']} ({u['rol']})")
+            st.caption(f"🔓 {u['email']} ({u['rol_app']})")
         if st.button("Cerrar sesión"):
             end_session()
             st.rerun()

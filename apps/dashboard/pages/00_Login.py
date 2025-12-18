@@ -12,7 +12,7 @@ st.title("🔐 Iniciar sesión")
 if is_authenticated():
     u = current_user()
     if u:  # Verificar que el usuario no sea None
-        st.success(f"Sesión iniciada como **{u['email']}** (rol: {u['rol']})")
+        st.success(f"Sesión iniciada como **{u['email']}** (rol: {u['rol_app']})")
     if st.button("Cerrar sesión"):
         end_session()
         st.rerun()

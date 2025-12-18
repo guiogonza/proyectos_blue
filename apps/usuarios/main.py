@@ -7,7 +7,7 @@ from shared.utils.exports import export_csv
 
 def _personas_opts():
     rows = personas_repo.list_personas(None, True, None)
-    return {"(Sin persona ligada)": None, **{f"{r['id']} - {r['nombre']} ({r['rol']})": r["id"] for r in rows}}
+    return {"(Sin persona ligada)": None, **{f"{r['id']} - {r['nombre']} ({r['ROL_PRINCIPAL']})": r["id"] for r in rows}}
 
 def render():
     st.title("🔑 Gestión de Usuarios (admin)")

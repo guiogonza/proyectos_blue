@@ -9,11 +9,11 @@ from shared.utils.exports import export_csv
 
 def _personas_options():
     rows = personas_repo.list_personas(None, True, None)
-    return {f"{r['id']} - {r['nombre']} ({r['rol']})": r["id"] for r in rows}
+    return {f"{r['id']} - {r['nombre']} ({r['ROL_PRINCIPAL']})": r["id"] for r in rows}
 
 def _proyectos_options():
     rows = proyectos_repo.list_proyectos(estado=None, cliente=None, search=None)
-    return {f"{r['id']} - {r['nombre']} ({r['estado']})": r["id"] for r in rows if r["estado"] != "Cerrado"}
+    return {f"{r['id']} - {r['NOMBRE']} ({r['ESTADO']})": r["id"] for r in rows if r["ESTADO"] != "Cerrado"}
 
 def _sprints_options(proyecto_id: Optional[int] = None):
     """Obtiene opciones de sprints, filtrados por proyecto si se especifica"""
