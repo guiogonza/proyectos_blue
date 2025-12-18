@@ -2,96 +2,10 @@
 import streamlit as st
 from typing import Literal, Optional, Dict, Any
 from datetime import datetime, timedelta
-import json
-import hashlib
-
-try:
-    from streamlit_cookies_manager import EncryptedCookieManager
-except ImportError:
-    EncryptedCookieManager = None
 
 Role = Literal["admin", "viewer"]
 SESSION_KEY = "auth_user"
-COOKIE_KEY = "project_ops_session"
-SESSION_TIMEOUT_MINUTES = 10
-
-# Variable global para almacenar el cookie manager
-_cookie_manager = None
-
-def get_cookie_manager():
-    """Obtiene o crea el cookie manager (sin cache)."""
-    global _cookie_manager
-    
-    if _cookie_manager is not None:
-        return _cookie_manager
-    
-    if EncryptedCookieManager is None:
-        return None
-    
-    try:
-        # Usar una clave secreta fija para encriptar cookies
-        cookie_password = "project_ops_secret_key_2025"
-        _cookie_manager = EncryptedCookieManager(
-            prefix="project_ops_",
-            password=cookie_password
-        )
-        return _cookie_manager
-    except:
-        return None
-
-def init_session_from_cookie() -> None:
-    """Restaura la sesión desde la cookie si existe y es válida."""
-    cookies = get_cookie_manager()
-    if cookies is None:
-        return
-    
-    try:
-        if not cookies.ready():
-            return
-    except:
-        # Si falla al verificar ready(), continuar sin cookies
-        return
-    
-    # Si ya hay sesión en memory, no hacer nada
-    if SESSION_KEY in st.session_state:
-        return
-    
-    # Intentar restaurar desde cookie
-    try:
-        cookie_data = cookies.get(COOKIE_KEY)
-        if cookie_data:
-            user_data = json.loads(cookie_data)
-            # Verificar expiración
-            last_activity = datetime.fromisoformat(user_data.get("last_activity", ""))
-            time_elapsed = datetime.now() - last_activity
-            
-            if time_elapsed <= timedelta(minutes=SESSION_TIMEOUT_MINUTES):
-                # Sesión válida, restaurar
-                st.session_state[SESSION_KEY] = user_data
-                # Renovar timestamp
-                renew_session()
-                save_session_to_cookie()
-    except (json.JSONDecodeError, ValueError, TypeError, KeyError, Exception):
-        # Cookie corrupta o error, continuar sin cookies
-        pass
-
-def save_session_to_cookie() -> None:
-    """Guarda la sesión actual en una cookie."""
-    cookies = get_cookie_manager()
-    if cookies is None:
-        return
-    
-    try:
-        if not cookies.ready():
-            return
-        
-        if SESSION_KEY in st.session_state:
-            cookie_data = json.dumps(st.session_state[SESSION_KEY])
-            cookies[COOKIE_KEY] = cookie_data
-            cookies.save()
-    except:
-        # Si falla, continuar sin guardar en cookie
-        pass
+SESSION_TIMEOUT_MINUTES = 30  # Aumentado a 30 minutos
 
 def start_session(user: Dict[str, Any]) -> None:
     st.session_state[SESSION_KEY] = {
@@ -100,30 +14,18 @@ def start_session(user: Dict[str, Any]) -> None:
         "rol_app": user["rol_app"],
         "last_activity": datetime.now().isoformat(),
     }
-    save_session_to_cookie()
 
 def end_session() -> None:
     if SESSION_KEY in st.session_state:
         del st.session_state[SESSION_KEY]
-    
-    # Eliminar cookie
-    try:
-        cookies = get_cookie_manager()
-        if cookies and cookies.ready():
-            cookies[COOKIE_KEY] = ""
-            cookies.save()
-    except:
-        # Si falla, continuar
-        pass
 
 def renew_session() -> None:
     """Renueva el timestamp de última actividad."""
     if SESSION_KEY in st.session_state:
         st.session_state[SESSION_KEY]["last_activity"] = datetime.now().isoformat()
-        save_session_to_cookie()
 
 def is_session_expired() -> bool:
-    """Verifica si la sesión ha expirado (más de 10 minutos de inactividad)."""
+    """Verifica si la sesión ha expirado (más de 30 minutos de inactividad)."""
     if SESSION_KEY not in st.session_state:
         return True
     
@@ -139,9 +41,6 @@ def is_session_expired() -> bool:
         return True
 
 def current_user() -> Optional[Dict[str, Any]]:
-    # Primero intentar restaurar sesión desde cookie
-    init_session_from_cookie()
-    
     if is_session_expired():
         end_session()
         return None
@@ -151,8 +50,6 @@ def current_user() -> Optional[Dict[str, Any]]:
     return st.session_state.get(SESSION_KEY)
 
 def is_authenticated() -> bool:
-    # Restaurar desde cookie si es necesario
-    init_session_from_cookie()
     return current_user() is not None
 
 def has_role(*roles: Role) -> bool:

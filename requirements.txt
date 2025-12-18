@@ -7,4 +7,3 @@ python-dotenv
 fastapi
 uvicorn[standard]
 orjson
-streamlit-cookies-manager

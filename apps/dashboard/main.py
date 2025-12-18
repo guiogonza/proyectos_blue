@@ -1,14 +1,10 @@
 # apps/dashboard/main.py
 import streamlit as st
 from shared.auth.auth import (
-    is_authenticated, current_user, end_session, 
-    hide_sidebar, init_session_from_cookie
+    is_authenticated, current_user, end_session, hide_sidebar
 )
 
 st.set_page_config(page_title="Project Ops", page_icon="📊", layout="wide")
-
-# Intentar restaurar sesión desde cookie
-init_session_from_cookie()
 
 # Ocultar sidebar si no está autenticado
 if not is_authenticated():
