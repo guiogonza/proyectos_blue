@@ -100,15 +100,17 @@ def delete_proyecto(pid: int) -> None:
         _log_event(conn, "delete", "proyectos", pid, {"sprints_eliminados": len(sprint_ids)})
 
 def list_proyectos(estado: Optional[str] = None, cliente: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
-    sql = "SELECT * FROM proyectos"
+    sql = """SELECT p.*, per.nombre as pm_nombre 
+             FROM proyectos p 
+             LEFT JOIN personas per ON p.pm_id = per.id"""
     where, params = [], []
-    if estado: where.append("ESTADO=%s"); params.append(estado)
-    if cliente: where.append("cliente=%s"); params.append(cliente)
+    if estado: where.append("p.ESTADO=%s"); params.append(estado)
+    if cliente: where.append("p.cliente=%s"); params.append(cliente)
     if search:
-        where.append("(NOMBRE LIKE %s OR cliente LIKE %s)")
+        where.append("(p.NOMBRE LIKE %s OR p.cliente LIKE %s)")
         like = f"%{search}%"; params.extend([like, like])
     if where: sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY created_at DESC, NOMBRE ASC"
+    sql += " ORDER BY p.created_at DESC, p.NOMBRE ASC"
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(sql, tuple(params))
         return cur.fetchall()

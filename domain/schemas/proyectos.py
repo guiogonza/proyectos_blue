@@ -45,6 +45,7 @@ class ProyectoListItem(BaseModel):
     NOMBRE: str
     cliente: Optional[str]
     pm_id: Optional[int]
+    pm_nombre: Optional[str] = None
     FECHA_INICIO: date
     FECHA_FIN_ESTIMADA: date
     ESTADO: str
