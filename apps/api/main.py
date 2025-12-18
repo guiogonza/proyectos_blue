@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, FileResponse
 from typing import List, Optional
 import sys
 import os
@@ -16,7 +16,8 @@ from domain.services import (
     sprints_service,
     asignaciones_service,
     usuarios_service,
-    auth_service
+    auth_service,
+    documentos_service
 )
 from domain.schemas.personas import PersonaListItem
 from domain.schemas.proyectos import ProyectoListItem
@@ -159,6 +160,41 @@ def listar_usuarios(
 def health_check():
     """Verificar estado de la API"""
     return {"status": "ok", "service": "Project Ops API"}
+
+# ==================== DOCUMENTOS ====================
+@app.get("/api/documentos/{documento_id}/download", tags=["Documentos"])
+def descargar_documento(documento_id: int):
+    """Descargar un documento por ID"""
+    doc = documentos_service.obtener(documento_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    
+    if not os.path.exists(doc.ruta_archivo):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado en el servidor")
+    
+    return FileResponse(
+        path=doc.ruta_archivo,
+        filename=doc.nombre_archivo,
+        media_type=doc.tipo_mime or "application/octet-stream"
+    )
+
+@app.get("/api/documentos/{documento_id}/view", tags=["Documentos"])
+def ver_documento(documento_id: int):
+    """Ver un documento en el navegador (inline)"""
+    doc = documentos_service.obtener(documento_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    
+    if not os.path.exists(doc.ruta_archivo):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado en el servidor")
+    
+    # Para visualización inline en el navegador
+    return FileResponse(
+        path=doc.ruta_archivo,
+        filename=doc.nombre_archivo,
+        media_type=doc.tipo_mime or "application/octet-stream",
+        headers={"Content-Disposition": f"inline; filename=\"{doc.nombre_archivo}\""}
+    )
 
 @app.get("/", tags=["Root"])
 def root():

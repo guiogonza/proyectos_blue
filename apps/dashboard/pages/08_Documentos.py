@@ -30,6 +30,9 @@ with col2:
 items = documentos_service.listar(proyecto_id=proyecto_id_filter, search=(search or None))
 st.success(f"Total: {len(items)} documento(s)")
 
+# URL base de la API para documentos
+API_BASE_URL = "http://164.68.118.86:8502/api/documentos"
+
 if items:
     # Preparar datos para mostrar
     display_data = []
@@ -49,16 +52,29 @@ if items:
             "ID": doc.id,
             "Proyecto": doc.proyecto_nombre or f"ID {doc.proyecto_id}",
             "Nombre Archivo": doc.nombre_archivo,
+            "Ver": f"{API_BASE_URL}/{doc.id}/view",
             "Descripción": doc.descripcion or "",
             "Tamaño": size_str,
             "Tipo": doc.tipo_mime or "N/A",
             "Fecha Carga": doc.fecha_carga.strftime("%Y-%m-%d %H:%M:%S")
         })
     
-    st.dataframe(display_data, use_container_width=True, hide_index=True)
+    # Mostrar tabla con links clicables
+    st.dataframe(
+        display_data, 
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "Ver": st.column_config.LinkColumn(
+                "📄 Ver",
+                help="Click para ver el documento",
+                display_text="Abrir"
+            )
+        }
+    )
     
-    # Botones para ver/descargar documentos
-    st.markdown("#### 📥 Ver/Descargar Documentos")
+    # Botones para descargar documentos
+    st.markdown("#### 📥 Descargar Documentos")
     cols = st.columns(4)
     for idx, doc in enumerate(items):
         with cols[idx % 4]:
