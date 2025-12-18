@@ -6,7 +6,7 @@ from shared.utils.exports import export_csv
 
 def _proyectos_opts():
     rows = proyectos_service.listar(None, None, None)
-    return {f"{r.id} - {r.nombre} ({r.estado})": r.id for r in rows}
+    return {f"{r.id} - {r.NOMBRE} ({r.ESTADO})": r.id for r in rows}
 
 def render():
     st.title("🗓️ Sprints por proyecto")
