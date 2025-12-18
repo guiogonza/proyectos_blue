@@ -2,7 +2,7 @@
 from typing import Optional, Literal
 from pydantic import BaseModel, EmailStr, Field
 
-Role = Literal["admin", "viewer"]
+Role = Literal["admin", "editor", "viewer"]
 
 class UsuarioCreate(BaseModel):
     email: EmailStr

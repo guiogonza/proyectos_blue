@@ -4,6 +4,7 @@ import streamlit as st
 from domain.schemas.personas import PersonaCreate, PersonaUpdate, ROLES_PERMITIDOS, SENIORITY_PERMITIDOS, TIPOS_DOCUMENTO_PERMITIDOS
 from domain.services import personas_service
 from shared.utils.exports import export_csv
+from shared.auth.auth import can_edit
 
 def render():
     st.title("👤 Gestión de Personas")
@@ -33,161 +34,163 @@ def render():
     else:
         st.info("No hay personas con ese filtro.")
 
-    st.markdown("---")
-    st.subheader("➕ Crear / ✏️ Editar / 🗑️ Eliminar")
-    tab_create, tab_edit, tab_estado, tab_delete = st.tabs(["Crear persona", "Editar persona", "Activar/Desactivar", "Eliminar"])
+    # Solo mostrar formularios de edición si el usuario puede editar
+    if can_edit():
+        st.markdown("---")
+        st.subheader("➕ Crear / ✏️ Editar / 🗑️ Eliminar")
+        tab_create, tab_edit, tab_estado, tab_delete = st.tabs(["Crear persona", "Editar persona", "Activar/Desactivar", "Eliminar"])
 
-    with tab_create:
-        # Obtener personas para selector de líder
-        personas_lider = personas_service.get_personas_para_lider()
-        opciones_lider = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider]
-        
-        with st.form("form_create", clear_on_submit=True):
-            c1, c2, c3 = st.columns([2,1,1])
-            nombre = c1.text_input("Nombre", "")
-            rol = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=0)
-            tarifa = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
+        with tab_create:
+            # Obtener personas para selector de líder
+            personas_lider = personas_service.get_personas_para_lider()
+            opciones_lider = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider]
             
-            # Segunda fila: documento, contacto, correo
-            c4, c5, c6 = st.columns([1,1,1])
-            tipo_doc = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, index=0)
-            numero_doc = c5.text_input("Número Documento (opcional)", "")
-            numero_contacto = c6.text_input("Número de contacto (opcional)", "")
-            
-            # Tercera fila: país, seniority, líder directo
-            c7, c8, c9 = st.columns([1,1,1])
-            correo = c7.text_input("Correo electrónico (opcional)", "")
-            pais = c8.text_input("País (opcional)", "")
-            seniority = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, index=0)
-            
-            # Cuarta fila: líder directo
-            lider_idx = st.selectbox("Líder Directo", options=range(len(opciones_lider)), 
-                                     format_func=lambda i: opciones_lider[i][1], index=0)
-            lider_id = opciones_lider[lider_idx][0] if lider_idx > 0 else None
-            
-            if st.form_submit_button("Crear"):
-                try:
-                    dto = PersonaCreate(
-                        nombre=nombre.strip(), 
-                        ROL_PRINCIPAL=rol, 
-                        COSTO_RECURSO=(tarifa if tarifa > 0 else None),
-                        NUMERO_DOCUMENTO=numero_doc.strip() if numero_doc.strip() else None,
-                        numero_contacto=numero_contacto.strip() if numero_contacto.strip() else None,
-                        correo=correo.strip() if correo.strip() else None,
-                        PAIS=pais.strip() if pais.strip() else None,
-                        SENIORITY=seniority,
-                        LIDER_DIRECTO=lider_id,
-                        TIPO_DOCUMENTO=tipo_doc
-                    )
-                    personas_service.crear(dto)
-                    st.success("Creada")
-                    st.rerun()
-                except Exception as e:
-                    st.error(str(e))
-
-    with tab_edit:
-        # Obtener personas para selector de líder (excluyendo la persona actual en edición)
-        personas_lider = personas_service.get_personas_para_lider()
-        
-        options = {f"{i.id} - {i.nombre} ({i.ROL_PRINCIPAL})": i for i in items}
-        if not options:
-            st.info("No hay registros para editar con el filtro actual.")
-        else:
-            sel = options[st.selectbox("Selecciona persona", list(options.keys()))]
-            
-            # Filtrar opciones de líder para excluir la persona actual (evitar auto-referencia)
-            opciones_lider_edit = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider if p["id"] != sel.id]
-            
-            with st.form("form_edit"):
+            with st.form("form_create", clear_on_submit=True):
                 c1, c2, c3 = st.columns([2,1,1])
-                nombre_e = c1.text_input("Nombre", sel.nombre)
-                rol_e = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=(ROLES_PERMITIDOS.index(sel.ROL_PRINCIPAL) if sel.ROL_PRINCIPAL in ROLES_PERMITIDOS else 0))
-                tarifa_e = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=float(sel.COSTO_RECURSO or 0.0), step=1000.0, format="%.2f")
+                nombre = c1.text_input("Nombre", "")
+                rol = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=0)
+                tarifa = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
                 
                 # Segunda fila: documento, contacto, correo
                 c4, c5, c6 = st.columns([1,1,1])
-                tipo_doc_e = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, 
-                                         index=(TIPOS_DOCUMENTO_PERMITIDOS.index(sel.TIPO_DOCUMENTO) if sel.TIPO_DOCUMENTO and sel.TIPO_DOCUMENTO in TIPOS_DOCUMENTO_PERMITIDOS else 0))
-                numero_doc_e = c5.text_input("Número Documento (opcional)", sel.NUMERO_DOCUMENTO or "")
-                numero_contacto_e = c6.text_input("Número de contacto (opcional)", sel.numero_contacto or "")
+                tipo_doc = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, index=0)
+                numero_doc = c5.text_input("Número Documento (opcional)", "")
+                numero_contacto = c6.text_input("Número de contacto (opcional)", "")
                 
-                # Tercera fila: país, seniority, correo
+                # Tercera fila: país, seniority, líder directo
                 c7, c8, c9 = st.columns([1,1,1])
-                correo_e = c7.text_input("Correo electrónico (opcional)", sel.correo or "")
-                pais_e = c8.text_input("País (opcional)", sel.PAIS or "")
-                seniority_e = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, 
-                                          index=(SENIORITY_PERMITIDOS.index(sel.SENIORITY) if sel.SENIORITY and sel.SENIORITY in SENIORITY_PERMITIDOS else 0))
+                correo = c7.text_input("Correo electrónico (opcional)", "")
+                pais = c8.text_input("País (opcional)", "")
+                seniority = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, index=0)
                 
                 # Cuarta fila: líder directo
-                lider_actual_idx = 0
-                if sel.LIDER_DIRECTO:
-                    for idx, (lid, lnom) in enumerate(opciones_lider_edit):
-                        if lid == sel.LIDER_DIRECTO:
-                            lider_actual_idx = idx
-                            break
+                lider_idx = st.selectbox("Líder Directo", options=range(len(opciones_lider)), 
+                                         format_func=lambda i: opciones_lider[i][1], index=0)
+                lider_id = opciones_lider[lider_idx][0] if lider_idx > 0 else None
                 
-                lider_idx_e = st.selectbox("Líder Directo", options=range(len(opciones_lider_edit)), 
-                                          format_func=lambda i: opciones_lider_edit[i][1], index=lider_actual_idx)
-                lider_id_e = opciones_lider_edit[lider_idx_e][0] if lider_idx_e < len(opciones_lider_edit) and opciones_lider_edit[lider_idx_e][0] > 0 else None
-                
-                # Campo de estado activo/inactivo
-                activo_e = st.checkbox("Activo", value=sel.activo, help="Desmarcar para desactivar la persona")
-                
-                if st.form_submit_button("Guardar cambios"):
+                if st.form_submit_button("Crear"):
                     try:
-                        dto = PersonaUpdate(
-                            id=sel.id, 
-                            nombre=nombre_e.strip(), 
-                            ROL_PRINCIPAL=rol_e, 
-                            COSTO_RECURSO=(tarifa_e if tarifa_e > 0 else None),
-                            NUMERO_DOCUMENTO=numero_doc_e.strip() if numero_doc_e.strip() else None,
-                            numero_contacto=numero_contacto_e.strip() if numero_contacto_e.strip() else None,
-                            correo=correo_e.strip() if correo_e.strip() else None,
-                            PAIS=pais_e.strip() if pais_e.strip() else None,
-                            SENIORITY=seniority_e,
-                            LIDER_DIRECTO=lider_id_e,
-                            TIPO_DOCUMENTO=tipo_doc_e,
-                            activo=activo_e
+                        dto = PersonaCreate(
+                            nombre=nombre.strip(), 
+                            ROL_PRINCIPAL=rol, 
+                            COSTO_RECURSO=(tarifa if tarifa > 0 else None),
+                            NUMERO_DOCUMENTO=numero_doc.strip() if numero_doc.strip() else None,
+                            numero_contacto=numero_contacto.strip() if numero_contacto.strip() else None,
+                            correo=correo.strip() if correo.strip() else None,
+                            PAIS=pais.strip() if pais.strip() else None,
+                            SENIORITY=seniority,
+                            LIDER_DIRECTO=lider_id,
+                            TIPO_DOCUMENTO=tipo_doc
                         )
-                        personas_service.actualizar(dto)
-                        st.success("Cambios guardados")
+                        personas_service.crear(dto)
+                        st.success("Creada")
                         st.rerun()
                     except Exception as e:
                         st.error(str(e))
 
-    with tab_estado:
-        st.info("💡 **Nota**: Ahora puedes cambiar el estado activo/inactivo directamente desde la pestaña 'Editar' usando el checkbox.")
-        st.markdown("---")
-        options2 = {f"{i.id} - {i.nombre} ({'Activa' if i.activo else 'Inactiva'})": i for i in items}
-        if not options2:
-            st.info("No hay registros en el filtro actual.")
-        else:
-            sel2 = options2[st.selectbox("Selecciona persona", list(options2.keys()))]
-            nuevo_estado = st.toggle("Activo", value=sel2.activo)
-            if st.button("Aplicar estado"):
-                try:
-                    personas_service.cambiar_estado(sel2.id, nuevo_estado)
-                    st.success("Estado actualizado")
-                    st.rerun()
-                except Exception as e:
-                    st.error(str(e))
+        with tab_edit:
+            # Obtener personas para selector de líder (excluyendo la persona actual en edición)
+            personas_lider = personas_service.get_personas_para_lider()
+            
+            options = {f"{i.id} - {i.nombre} ({i.ROL_PRINCIPAL})": i for i in items}
+            if not options:
+                st.info("No hay registros para editar con el filtro actual.")
+            else:
+                sel = options[st.selectbox("Selecciona persona", list(options.keys()))]
+                
+                # Filtrar opciones de líder para excluir la persona actual (evitar auto-referencia)
+                opciones_lider_edit = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider if p["id"] != sel.id]
+                
+                with st.form("form_edit"):
+                    c1, c2, c3 = st.columns([2,1,1])
+                    nombre_e = c1.text_input("Nombre", sel.nombre)
+                    rol_e = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=(ROLES_PERMITIDOS.index(sel.ROL_PRINCIPAL) if sel.ROL_PRINCIPAL in ROLES_PERMITIDOS else 0))
+                    tarifa_e = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=float(sel.COSTO_RECURSO or 0.0), step=1000.0, format="%.2f")
+                    
+                    # Segunda fila: documento, contacto, correo
+                    c4, c5, c6 = st.columns([1,1,1])
+                    tipo_doc_e = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, 
+                                             index=(TIPOS_DOCUMENTO_PERMITIDOS.index(sel.TIPO_DOCUMENTO) if sel.TIPO_DOCUMENTO and sel.TIPO_DOCUMENTO in TIPOS_DOCUMENTO_PERMITIDOS else 0))
+                    numero_doc_e = c5.text_input("Número Documento (opcional)", sel.NUMERO_DOCUMENTO or "")
+                    numero_contacto_e = c6.text_input("Número de contacto (opcional)", sel.numero_contacto or "")
+                    
+                    # Tercera fila: país, seniority, correo
+                    c7, c8, c9 = st.columns([1,1,1])
+                    correo_e = c7.text_input("Correo electrónico (opcional)", sel.correo or "")
+                    pais_e = c8.text_input("País (opcional)", sel.PAIS or "")
+                    seniority_e = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, 
+                                              index=(SENIORITY_PERMITIDOS.index(sel.SENIORITY) if sel.SENIORITY and sel.SENIORITY in SENIORITY_PERMITIDOS else 0))
+                    
+                    # Cuarta fila: líder directo
+                    lider_actual_idx = 0
+                    if sel.LIDER_DIRECTO:
+                        for idx, (lid, lnom) in enumerate(opciones_lider_edit):
+                            if lid == sel.LIDER_DIRECTO:
+                                lider_actual_idx = idx
+                                break
+                    
+                    lider_idx_e = st.selectbox("Líder Directo", options=range(len(opciones_lider_edit)), 
+                                              format_func=lambda i: opciones_lider_edit[i][1], index=lider_actual_idx)
+                    lider_id_e = opciones_lider_edit[lider_idx_e][0] if lider_idx_e < len(opciones_lider_edit) and opciones_lider_edit[lider_idx_e][0] > 0 else None
+                    
+                    # Campo de estado activo/inactivo
+                    activo_e = st.checkbox("Activo", value=sel.activo, help="Desmarcar para desactivar la persona")
+                    
+                    if st.form_submit_button("Guardar cambios"):
+                        try:
+                            dto = PersonaUpdate(
+                                id=sel.id, 
+                                nombre=nombre_e.strip(), 
+                                ROL_PRINCIPAL=rol_e, 
+                                COSTO_RECURSO=(tarifa_e if tarifa_e > 0 else None),
+                                NUMERO_DOCUMENTO=numero_doc_e.strip() if numero_doc_e.strip() else None,
+                                numero_contacto=numero_contacto_e.strip() if numero_contacto_e.strip() else None,
+                                correo=correo_e.strip() if correo_e.strip() else None,
+                                PAIS=pais_e.strip() if pais_e.strip() else None,
+                                SENIORITY=seniority_e,
+                                LIDER_DIRECTO=lider_id_e,
+                                TIPO_DOCUMENTO=tipo_doc_e,
+                                activo=activo_e
+                            )
+                            personas_service.actualizar(dto)
+                            st.success("Cambios guardados")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(str(e))
 
-    with tab_delete:
-        st.warning("⚠️ **Advertencia**: Esta acción eliminará permanentemente la persona de la base de datos.")
-        options_del = {f"{i.id} - {i.nombre} ({i.ROL_PRINCIPAL})": i for i in items}
-        if not options_del:
-            st.info("No hay registros para eliminar con el filtro actual.")
-        else:
-            sel_del = options_del[st.selectbox("Selecciona persona a eliminar", list(options_del.keys()), key="delete_select")]
-            st.error(f"Vas a eliminar: **{sel_del.nombre}** (ID: {sel_del.id})")
-            confirmar = st.checkbox("Confirmo que deseo eliminar esta persona", key="confirm_delete_persona")
-            if st.button("🗑️ Eliminar permanentemente", type="primary", disabled=not confirmar):
-                try:
-                    personas_service.eliminar(sel_del.id)
-                    st.success(f"Persona '{sel_del.nombre}' eliminada exitosamente")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error al eliminar: {str(e)}")
+        with tab_estado:
+            st.info("💡 **Nota**: Ahora puedes cambiar el estado activo/inactivo directamente desde la pestaña 'Editar' usando el checkbox.")
+            st.markdown("---")
+            options2 = {f"{i.id} - {i.nombre} ({'Activa' if i.activo else 'Inactiva'})": i for i in items}
+            if not options2:
+                st.info("No hay registros en el filtro actual.")
+            else:
+                sel2 = options2[st.selectbox("Selecciona persona", list(options2.keys()))]
+                nuevo_estado = st.toggle("Activo", value=sel2.activo)
+                if st.button("Aplicar estado"):
+                    try:
+                        personas_service.cambiar_estado(sel2.id, nuevo_estado)
+                        st.success("Estado actualizado")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(str(e))
+
+        with tab_delete:
+            st.warning("⚠️ **Advertencia**: Esta acción eliminará permanentemente la persona de la base de datos.")
+            options_del = {f"{i.id} - {i.nombre} ({i.ROL_PRINCIPAL})": i for i in items}
+            if not options_del:
+                st.info("No hay registros para eliminar con el filtro actual.")
+            else:
+                sel_del = options_del[st.selectbox("Selecciona persona a eliminar", list(options_del.keys()), key="delete_select")]
+                st.error(f"Vas a eliminar: **{sel_del.nombre}** (ID: {sel_del.id})")
+                confirmar = st.checkbox("Confirmo que deseo eliminar esta persona", key="confirm_delete_persona")
+                if st.button("🗑️ Eliminar permanentemente", type="primary", disabled=not confirmar):
+                    try:
+                        personas_service.eliminar(sel_del.id)
+                        st.success(f"Persona '{sel_del.nombre}' eliminada exitosamente")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error al eliminar: {str(e)}")
 
 # Permite ejecutar este archivo solo (fuera del multipage) para pruebas:
 if __name__ == "__main__":

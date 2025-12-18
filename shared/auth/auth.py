@@ -6,7 +6,7 @@ from typing import Literal, Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from shared.config import settings
 
-Role = Literal["admin", "viewer"]
+Role = Literal["admin", "editor", "viewer"]
 SESSION_KEY = "auth_user"
 SESSION_TIMEOUT_MINUTES = 30  # Aumentado a 30 minutos
 COOKIE_NAME = "project_ops_auth"
@@ -125,6 +125,28 @@ def is_admin() -> bool:
     if not u:
         return False
     return u.get("rol_app", "").lower() == "admin"
+
+def is_editor() -> bool:
+    """Verifica si el usuario actual es editor"""
+    u = current_user()
+    if not u:
+        return False
+    return u.get("rol_app", "").lower() == "editor"
+
+def is_viewer() -> bool:
+    """Verifica si el usuario actual es viewer (solo lectura)"""
+    u = current_user()
+    if not u:
+        return False
+    return u.get("rol_app", "").lower() == "viewer"
+
+def can_edit() -> bool:
+    """Verifica si el usuario puede editar (admin o editor)"""
+    u = current_user()
+    if not u:
+        return False
+    role = u.get("rol_app", "").lower()
+    return role in ["admin", "editor"]
 
 def get_user_proyectos() -> List[int]:
     """Obtiene la lista de proyectos asignados al usuario actual.

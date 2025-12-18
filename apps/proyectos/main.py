@@ -4,7 +4,7 @@ from datetime import date
 from domain.schemas.proyectos import ProyectoCreate, ProyectoUpdate, ProyectoClose, ESTADOS_PROY
 from domain.services import proyectos_service
 from shared.utils.exports import export_csv
-from shared.auth.auth import is_admin, get_user_proyectos
+from shared.auth.auth import is_admin, get_user_proyectos, can_edit
 
 def _header_resumen(items):
     tot = len(items)
@@ -59,10 +59,12 @@ def render():
     else:
         st.info("No hay proyectos con ese filtro.")
 
-    st.markdown("---")
-    st.subheader("➕ Crear / ✏️ Editar / ✅ Cerrar / 🗑️ Eliminar")
+    # Solo mostrar formularios de edición si el usuario puede editar
+    if can_edit():
+        st.markdown("---")
+        st.subheader("➕ Crear / ✏️ Editar / ✅ Cerrar / 🗑️ Eliminar")
 
-    tab_create, tab_edit, tab_close, tab_delete = st.tabs(["Crear", "Editar", "Cerrar", "Eliminar"])
+        tab_create, tab_edit, tab_close, tab_delete = st.tabs(["Crear", "Editar", "Cerrar", "Eliminar"])
 
     # ---- Crear ----
     with tab_create:

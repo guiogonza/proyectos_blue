@@ -41,7 +41,7 @@ def render():
     with tab_crear:
         with st.form("form_user_create", clear_on_submit=True):
             email = st.text_input("Email")
-            rol = st.selectbox("Rol", ["admin", "viewer"])
+            rol = st.selectbox("Rol", ["admin", "editor", "viewer"])
             p_opts = _personas_opts()
             persona_lbl = st.selectbox("Persona (opcional)", list(p_opts.keys()))
             pwd = st.text_input("Contraseña inicial", type="password")
@@ -63,7 +63,9 @@ def render():
             sel = opt[sel_k]
             with st.form("form_user_edit"):
                 email_e = st.text_input("Email", sel.email)
-                rol_e = st.selectbox("Rol", ["admin", "viewer"], index=0 if sel.rol_app=="admin" else 1)
+                roles_list = ["admin", "editor", "viewer"]
+                rol_idx = roles_list.index(sel.rol_app) if sel.rol_app in roles_list else 2
+                rol_e = st.selectbox("Rol", roles_list, index=rol_idx)
                 p_opts = _personas_opts()
                 persona_lbl_e = st.selectbox("Persona (opcional)", list(p_opts.keys()), index=0)
                 activo_e = st.toggle("Activo", value=sel.activo)
@@ -77,15 +79,15 @@ def render():
                         st.error(str(e))
 
     with tab_proyectos:
-        st.info("📁 Asigna proyectos a usuarios tipo 'viewer'. Los usuarios admin tienen acceso a todos los proyectos automáticamente.")
+        st.info("📁 Asigna proyectos a usuarios tipo 'editor' o 'viewer'. Los usuarios admin tienen acceso a todos los proyectos automáticamente.")
         
-        # Filtrar solo usuarios viewer
-        usuarios_viewer = [i for i in items if i.rol_app.lower() == "viewer"]
+        # Filtrar usuarios no-admin
+        usuarios_no_admin = [i for i in items if i.rol_app.lower() != "admin"]
         
-        if not usuarios_viewer:
-            st.warning("No hay usuarios con rol 'viewer'. Los usuarios admin ya tienen acceso a todos los proyectos.")
+        if not usuarios_no_admin:
+            st.warning("No hay usuarios con rol 'editor' o 'viewer'. Los usuarios admin ya tienen acceso a todos los proyectos.")
         else:
-            opt_user = {f"{i.id} - {i.email}": i for i in usuarios_viewer}
+            opt_user = {f"{i.id} - {i.email} ({i.rol_app})": i for i in usuarios_no_admin}
             sel_user_k = st.selectbox("Selecciona usuario", list(opt_user.keys()), key="proyectos_user_select")
             sel_user = opt_user[sel_user_k]
             
