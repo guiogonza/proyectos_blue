@@ -1,7 +1,19 @@
 # apps/dashboard/pages/00_🔐_Login.py
 import streamlit as st
 from domain.services.auth_service import verify_credentials
-from shared.auth.auth import start_session, end_session, is_authenticated, current_user, hide_sidebar, is_session_expired
+from shared.auth.auth import (
+    start_session, end_session, is_authenticated, 
+    current_user, hide_sidebar, is_session_expired, 
+    get_cookie_manager, init_session_from_cookie
+)
+
+# Inicializar cookie manager
+cookies = get_cookie_manager()
+if cookies and not cookies.ready():
+    st.stop()
+
+# Intentar restaurar sesión desde cookie
+init_session_from_cookie()
 
 # Ocultar sidebar si no está autenticado
 if not is_authenticated():
