@@ -44,23 +44,23 @@ def exists_proyecto(proyecto_id: int) -> Optional[str]:
 def create_asignacion(data: Dict[str, Any]) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO asignaciones (persona_id, proyecto_id, sprint_id, dedicacion_pct, fecha_asignacion, fecha_fin) "
+            "INSERT INTO asignaciones (persona_id, proyecto_id, sprint_id, dedicacion_horas, fecha_asignacion, fecha_fin) "
             "VALUES (%s,%s,%s,%s,%s,%s)",
             (data["persona_id"], data["proyecto_id"], data.get("sprint_id"),
-             data["dedicacion_pct"], data["fecha_asignacion"], data.get("fecha_fin"))
+             data["dedicacion_horas"], data["fecha_asignacion"], data.get("fecha_fin"))
         )
         aid = cur.lastrowid
-        _log_event(conn, "create", aid, {"persona_id": data["persona_id"], "proyecto_id": data["proyecto_id"], "dedicacion_pct": data["dedicacion_pct"]})
+        _log_event(conn, "create", aid, {"persona_id": data["persona_id"], "proyecto_id": data["proyecto_id"], "dedicacion_horas": data["dedicacion_horas"]})
         return aid
 
 def update_asignacion(aid: int, data: Dict[str, Any]) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "UPDATE asignaciones SET persona_id=%s, proyecto_id=%s, sprint_id=%s, dedicacion_pct=%s, fecha_asignacion=%s, fecha_fin=%s WHERE id=%s",
+            "UPDATE asignaciones SET persona_id=%s, proyecto_id=%s, sprint_id=%s, dedicacion_horas=%s, fecha_asignacion=%s, fecha_fin=%s WHERE id=%s",
             (data["persona_id"], data["proyecto_id"], data.get("sprint_id"),
-             data["dedicacion_pct"], data["fecha_asignacion"], data.get("fecha_fin"), aid)
+             data["dedicacion_horas"], data["fecha_asignacion"], data.get("fecha_fin"), aid)
         )
-        _log_event(conn, "update", aid, {"dedicacion_pct": data["dedicacion_pct"]})
+        _log_event(conn, "update", aid, {"dedicacion_horas": data["dedicacion_horas"]})
 
 def end_asignacion(aid: int, fecha_fin) -> None:
     with get_conn() as conn, conn.cursor() as cur:
@@ -99,12 +99,12 @@ def list_asignaciones(persona_id: Optional[int] = None, proyecto_id: Optional[in
 # ---- Métricas de carga ----
 def carga_persona(persona_id: int) -> Tuple[float, int]:
     """
-    Devuelve (suma_dedicacion_pct_activa, num_proyectos_activos) para la persona.
+    Devuelve (suma_dedicacion_horas_activa, num_proyectos_activos) para la persona.
     Activo = asignación sin fecha_fin o con fecha_fin >= hoy y proyecto != 'Cerrado'.
     """
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            """SELECT COALESCE(SUM(a.dedicacion_pct),0) AS total_pct, COUNT(DISTINCT a.proyecto_id) AS n_proj
+            """SELECT COALESCE(SUM(a.dedicacion_horas),0) AS total_horas, COUNT(DISTINCT a.proyecto_id) AS n_proj
                FROM asignaciones a
                JOIN proyectos pr ON pr.id = a.proyecto_id
                WHERE a.persona_id=%s
@@ -113,4 +113,4 @@ def carga_persona(persona_id: int) -> Tuple[float, int]:
             (persona_id,)
         )
         row = cur.fetchone()
-        return float(row["total_pct"]), int(row["n_proj"])
+        return float(row["total_horas"]), int(row["n_proj"])

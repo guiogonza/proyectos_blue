@@ -3,7 +3,14 @@
 from typing import Optional
 from pydantic import BaseModel, Field, validator
 
-ROLES_PERMITIDOS = ["PM", "Desarrollador", "Analista", "QA", "DevOps", "Data", "Soporte"]
+ROLES_PERMITIDOS = [
+    "Technician I",
+    "Technician II",
+    "Experienced Technician I",
+    "Experienced Technician II",
+    "Technician specialist",
+    "Technician architect"
+]
 SENIORITY_PERMITIDOS = ["Junior", "Semi-Senior", "Senior", "Lead", "Principal"]
 TIPOS_DOCUMENTO_PERMITIDOS = ["Cédula", "Pasaporte", "DNI", "Otro"]
 

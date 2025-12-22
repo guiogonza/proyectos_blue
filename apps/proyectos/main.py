@@ -53,9 +53,14 @@ def render():
         path = export_csv([i.dict() for i in items], "proyectos")
         st.toast(f"Exportado a {path}", icon="✅")
 
-    # Tabla
+    # Tabla (ocultar pm_id)
     if items:
-        st.dataframe([i.dict() for i in items], use_container_width=True, hide_index=True)
+        display_items = []
+        for i in items:
+            item_dict = i.dict()
+            item_dict.pop('pm_id', None)  # Ocultar pm_id
+            display_items.append(item_dict)
+        st.dataframe(display_items, use_container_width=True, hide_index=True)
     else:
         st.info("No hay proyectos con ese filtro.")
 

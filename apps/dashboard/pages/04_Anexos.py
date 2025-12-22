@@ -1,7 +1,7 @@
-# apps/dashboard/pages/08_Documentos.py
+# apps/dashboard/pages/04_Anexos.py
 import streamlit as st
 import os
-from datetime import datetime
+from datetime import datetime, date
 from domain.schemas.documentos import DocumentoCreate, DocumentoUpdate
 from domain.services import documentos_service, proyectos_service
 from shared.auth.auth import require_authentication, is_admin, get_user_proyectos, can_edit, init_auth
@@ -11,8 +11,8 @@ init_auth()
 
 require_authentication()
 
-st.title("📎 Gestión de Documentos")
-st.caption("Carga y gestiona documentos asociados a proyectos")
+st.title("📎 Gestión de Anexos")
+st.caption("Carga y gestiona anexos asociados a proyectos")
 
 # Crear directorio de uploads si no existe
 UPLOAD_DIR = "uploads/documentos"
@@ -42,7 +42,7 @@ items = documentos_service.listar(proyecto_id=proyecto_id_filter, search=(search
 if not is_admin() and proyectos_permitidos:
     items = [d for d in items if d.proyecto_id in proyectos_permitidos]
 
-st.success(f"Total: {len(items)} documento(s)")
+st.success(f"Total: {len(items)} anexo(s)")
 
 # URL base de la API para documentos
 API_BASE_URL = "http://164.68.118.86:8502/api/documentos"
@@ -62,14 +62,21 @@ if items:
         else:
             size_str = "N/A"
         
+        # Formatear valor
+        valor_str = f"${doc.valor:,.2f}" if doc.valor else ""
+        
+        # Formatear fecha documento
+        fecha_doc_str = doc.fecha_documento.strftime("%Y-%m-%d") if doc.fecha_documento else ""
+        
         display_data.append({
             "ID": doc.id,
             "Proyecto": doc.proyecto_nombre or f"ID {doc.proyecto_id}",
             "Nombre Archivo": doc.nombre_archivo,
             "Ver": f"{API_BASE_URL}/{doc.id}/view",
             "Descripción": doc.descripcion or "",
+            "Valor": valor_str,
+            "Fecha Doc": fecha_doc_str,
             "Tamaño": size_str,
-            "Tipo": doc.tipo_mime or "N/A",
             "Fecha Carga": doc.fecha_carga.strftime("%Y-%m-%d %H:%M:%S")
         })
     
@@ -127,6 +134,15 @@ if can_edit():
             # Descripción general
             descripcion = st.text_area("Descripción", placeholder="Descripción general de los documentos", height=80)
             
+            # Campos adicionales: valor y fecha
+            col_v, col_f = st.columns(2)
+            with col_v:
+                valor = st.number_input("Valor", min_value=0.0, value=0.0, step=0.01, format="%.2f",
+                                       help="Valor numérico del anexo (acepta decimales)")
+            with col_f:
+                fecha_documento = st.date_input("Fecha del documento", value=None,
+                                               help="Fecha del documento (puede ser cualquier fecha)")
+            
             # Upload de archivos
             uploaded_files = st.file_uploader(
                 "Selecciona archivo(s)",
@@ -165,7 +181,9 @@ if can_edit():
                                 descripcion=descripcion.strip() if descripcion.strip() else None,
                                 ruta_archivo=file_path,
                                 tamanio_bytes=uploaded_file.size,
-                                tipo_mime=uploaded_file.type
+                                tipo_mime=uploaded_file.type,
+                                valor=valor if valor > 0 else None,
+                                fecha_documento=fecha_documento
                             )
                             documentos_service.crear(dto)
                             success_count += 1
@@ -192,6 +210,15 @@ if can_edit():
                 nombre_e = st.text_input("Nombre del archivo", sel.nombre_archivo)
                 desc_e = st.text_area("Descripción", sel.descripcion or "", height=100)
                 
+                # Campos adicionales: valor y fecha
+                col_ve, col_fe = st.columns(2)
+                with col_ve:
+                    valor_e = st.number_input("Valor", min_value=0.0, value=float(sel.valor or 0.0), step=0.01, format="%.2f",
+                                             help="Valor numérico del anexo (acepta decimales)")
+                with col_fe:
+                    fecha_doc_e = st.date_input("Fecha del documento", value=sel.fecha_documento,
+                                               help="Fecha del documento (puede ser cualquier fecha)")
+                
                 st.caption(f"📁 Ruta: {sel.ruta_archivo}")
                 st.caption(f"📅 Subido: {sel.fecha_carga.strftime('%Y-%m-%d %H:%M:%S')}")
                 
@@ -200,7 +227,9 @@ if can_edit():
                         dto = DocumentoUpdate(
                             id=sel.id,
                             nombre_archivo=nombre_e.strip(),
-                            descripcion=desc_e.strip() if desc_e.strip() else None
+                            descripcion=desc_e.strip() if desc_e.strip() else None,
+                            valor=valor_e if valor_e > 0 else None,
+                            fecha_documento=fecha_doc_e
                         )
                         documentos_service.actualizar(dto)
                         st.success("Cambios guardados")

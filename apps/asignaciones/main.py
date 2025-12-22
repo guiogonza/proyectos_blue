@@ -114,6 +114,16 @@ def render():
                 proyecto_id_sel = pr_opts[proyecto_sel_c]
                 sprint_opts = _sprints_options(proyecto_id_sel)
                 
+                # Lista de países ordenada alfabéticamente
+                PAISES = sorted([
+                    "Argentina",
+                    "Colombia",
+                    "España",
+                    "México",
+                    "Perú",
+                    "Uruguay"
+                ])
+                
                 with st.form("form_create_asig", clear_on_submit=True):
                     st.write(f"**Persona:** {persona_sel_c}")
                     st.write(f"**Proyecto:** {proyecto_sel_c}")
@@ -121,8 +131,17 @@ def render():
                     sprint_fk = st.selectbox("Sprint (opcional)", list(sprint_opts.keys()), 
                                            help=f"Sprints disponibles para el proyecto seleccionado")
                     
+                    # Selectbox de país con autocompletado (escribir para filtrar)
+                    pais_seleccionado = st.selectbox(
+                        "País",
+                        options=PAISES,
+                        index=None,
+                        placeholder="Escribe para buscar un país...",
+                        help="Selecciona el país de la asignación"
+                    )
+                    
                     col3, col4, col5 = st.columns([1,1,1])
-                    dedicacion = col3.number_input("Dedicacion %", min_value=1.0, max_value=100.0, value=20.0, step=1.0, format="%.1f")
+                    dedicacion = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=40.0, step=1.0, format="%.1f")
                     fi = col4.date_input("Fecha asignacion", value=date.today())
                     ff = col5.date_input("Fecha fin (opcional)", value=None, min_value=fi)
 
@@ -132,14 +151,14 @@ def render():
                                 persona_id=p_opts[persona_sel_c],
                                 proyecto_id=pr_opts[proyecto_sel_c],
                                 sprint_id=sprint_opts[sprint_fk],
-                                dedicacion_pct=dedicacion,
+                                dedicacion_horas=dedicacion,
                                 fecha_asignacion=fi,
                                 fecha_fin=ff
                             )
                             info = asignaciones_service.crear(dto)
                             if info.get("over_projects"):
                                 st.warning("La persona quedaria en mas proyectos que el umbral configurado (OVERLOAD_PROJECTS_THRESHOLD).")
-                            st.success(f"Asignacion creada (ID {info['asignacion_id']}). Carga post: {info['total_pct_post']:.1f}%")
+                            st.success(f"Asignacion creada (ID {info['asignacion_id']}). Carga post: {info['total_horas_post']:.1f}h")
                             st.rerun()
                         except Exception as e:
                             st.error(str(e))
@@ -171,7 +190,7 @@ def render():
                                              help=f"Sprints disponibles para el proyecto seleccionado")
                     
                     col3, col4, col5 = st.columns([1,1,1])
-                    dedicacion_e = col3.number_input("Dedicacion %", min_value=1.0, max_value=100.0, value=float(sel.dedicacion_pct), step=1.0, format="%.1f")
+                    dedicacion_e = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=float(sel.dedicacion_horas), step=1.0, format="%.1f")
                     fi_e = col4.date_input("Fecha asignacion", value=sel.fecha_asignacion)
                     ff_e = col5.date_input("Fecha fin (opcional)", value=sel.fecha_fin) if st.checkbox("Modificar fecha fin", value=bool(sel.fecha_fin)) else sel.fecha_fin
 
@@ -182,7 +201,7 @@ def render():
                                 persona_id=p_opts[persona_fk_e],
                                 proyecto_id=pr_opts[proyecto_fk_e],
                                 sprint_id=sprint_opts_e[sprint_fk_e],
-                                dedicacion_pct=dedicacion_e,
+                                dedicacion_horas=dedicacion_e,
                                 fecha_asignacion=fi_e,
                                 fecha_fin=ff_e
                             )
@@ -219,7 +238,7 @@ def render():
             if not items:
                 st.info("No hay asignaciones para eliminar con el filtro actual.")
             else:
-                options_del = {f"{i.id} - {i.persona_nombre} → {i.proyecto_nombre} ({i.dedicacion_pct}%)": i for i in items}
+                options_del = {f"{i.id} - {i.persona_nombre} → {i.proyecto_nombre} ({i.dedicacion_horas}h)": i for i in items}
                 sel_del_k = st.selectbox("Selecciona asignación a eliminar", list(options_del.keys()), key="delete_select_asignacion")
                 sel_del = options_del[sel_del_k]
                 
@@ -228,7 +247,7 @@ def render():
                 st.write(f"- **Proyecto:** {sel_del.proyecto_nombre}")
                 if sel_del.sprint_nombre:
                     st.write(f"- **Sprint:** {sel_del.sprint_nombre}")
-                st.write(f"- **Dedicación:** {sel_del.dedicacion_pct}%")
+                st.write(f"- **Dedicación:** {sel_del.dedicacion_horas} horas")
                 st.write(f"- **Fecha asignación:** {sel_del.fecha_asignacion}")
                 
                 confirmar = st.checkbox("Confirmo que deseo eliminar esta asignación", key="confirm_delete_asignacion")

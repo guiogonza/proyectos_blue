@@ -5,23 +5,23 @@ import jwt
 from typing import Literal, Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from shared.config import settings
+import time
 
 Role = Literal["admin", "editor", "viewer"]
 SESSION_KEY = "auth_user"
-SESSION_TIMEOUT_MINUTES = 30  # Aumentado a 30 minutos
+SESSION_TIMEOUT_MINUTES = 30
 COOKIE_NAME = "project_ops_auth"
-COOKIE_MANAGER_KEY = "cookie_manager_singleton"
-
-@st.cache_resource
-def _get_cookie_manager():
-    """
-    Singleton del CookieManager usando cache_resource.
-    Esto asegura que solo haya una instancia durante toda la sesión.
-    """
-    return stx.CookieManager()
+COOKIE_MANAGER_KEY = "_cookie_manager"
+COOKIE_READY_KEY = "_cookie_ready"
 
 def get_cookie_manager():
-    return _get_cookie_manager()
+    """
+    Obtiene el CookieManager. Debe usarse solo después de que init_auth()
+    haya confirmado que las cookies están listas.
+    """
+    if COOKIE_MANAGER_KEY not in st.session_state:
+        st.session_state[COOKIE_MANAGER_KEY] = stx.CookieManager(key="project_ops_cookies")
+    return st.session_state[COOKIE_MANAGER_KEY]
 
 def create_token(user: Dict[str, Any]) -> str:
     payload = {
@@ -109,17 +109,14 @@ def is_session_expired() -> bool:
 def current_user() -> Optional[Dict[str, Any]]:
     """
     Obtiene el usuario actual de la sesión.
-    Primero intenta session_state, luego cookie.
-    
-    IMPORTANTE: El CookieManager necesita renderizarse para leer cookies.
-    Por eso usamos cache_resource para mantener una instancia singleton.
+    Solo verifica session_state - la restauración desde cookie
+    se hace en init_auth().
     """
-    
-    # Si la sesión fue cerrada explícitamente en este ciclo, no restaurar
+    # Si la sesión fue cerrada explícitamente, no hay usuario
     if st.session_state.get("_session_ended"):
         return None
     
-    # 1. Verificar session_state primero (más rápido)
+    # Verificar session_state
     if SESSION_KEY in st.session_state:
         if not is_session_expired():
             renew_session()
@@ -127,63 +124,57 @@ def current_user() -> Optional[Dict[str, Any]]:
         else:
             # Sesión expirada, limpiar
             del st.session_state[SESSION_KEY]
-    
-    # 2. Intentar recuperar de cookie
-    try:
-        cm = get_cookie_manager()
-        token = cm.get(COOKIE_NAME)
-        
-        if token and isinstance(token, str) and len(token) > 10:
-            payload = decode_token(token)
-            if payload:
-                # Restaurar sesión desde cookie
-                user_data = {
-                    "id": payload["sub"],
-                    "email": payload["email"],
-                    "rol_app": payload["rol_app"],
-                    "proyectos": payload.get("proyectos", []),
-                    "last_activity": datetime.now().isoformat()
-                }
-                st.session_state[SESSION_KEY] = user_data
-                return user_data
-    except Exception as e:
-        print(f"Error reading cookie: {e}")
             
     return None
 
 def init_auth():
     """
     Inicializa el sistema de autenticación.
-    DEBE llamarse al inicio de cada página para que el CookieManager
-    pueda leer las cookies correctamente.
+    DEBE llamarse al inicio de cada página.
     
-    Esta función renderiza el CookieManager (necesario para que funcione)
-    y restaura la sesión si hay una cookie válida.
+    El CookieManager de extra-streamlit-components necesita un ciclo
+    de rerun para leer las cookies. Esta función maneja eso automáticamente.
     """
-    # Forzar la inicialización del CookieManager
-    cm = get_cookie_manager()
-    
-    # Limpiar el flag de sesión terminada si existe de un ciclo anterior
+    # Limpiar el flag de sesión terminada si existe
     if "_session_ended" in st.session_state:
         del st.session_state["_session_ended"]
     
-    # Intentar restaurar sesión desde cookie si no hay sesión activa
-    if SESSION_KEY not in st.session_state:
-        try:
-            token = cm.get(COOKIE_NAME)
-            if token and isinstance(token, str) and len(token) > 10:
-                payload = decode_token(token)
-                if payload:
-                    user_data = {
-                        "id": payload["sub"],
-                        "email": payload["email"],
-                        "rol_app": payload["rol_app"],
-                        "proyectos": payload.get("proyectos", []),
-                        "last_activity": datetime.now().isoformat()
-                    }
-                    st.session_state[SESSION_KEY] = user_data
-        except Exception as e:
-            print(f"Error in init_auth: {e}")
+    # Si ya tenemos usuario en session_state, no hacer nada
+    if SESSION_KEY in st.session_state and not is_session_expired():
+        renew_session()
+        return
+    
+    # Forzar la inicialización del CookieManager
+    cm = get_cookie_manager()
+    
+    # Intentar obtener todas las cookies
+    cookies = cm.get_all()
+    
+    # Si cookies es None, el CookieManager aún no ha cargado
+    # Necesitamos hacer un rerun para que cargue
+    if cookies is None:
+        # Marcar que estamos esperando las cookies
+        if not st.session_state.get(COOKIE_READY_KEY):
+            st.session_state[COOKIE_READY_KEY] = True
+            time.sleep(0.1)  # Pequeña pausa para permitir que JS cargue
+            st.rerun()
+        return
+    
+    # Las cookies están listas, intentar restaurar sesión
+    token = cookies.get(COOKIE_NAME)
+    
+    if token and isinstance(token, str) and len(token) > 10:
+        payload = decode_token(token)
+        if payload:
+            # Restaurar sesión desde cookie
+            user_data = {
+                "id": payload["sub"],
+                "email": payload["email"],
+                "rol_app": payload["rol_app"],
+                "proyectos": payload.get("proyectos", []),
+                "last_activity": datetime.now().isoformat()
+            }
+            st.session_state[SESSION_KEY] = user_data
 
 def is_authenticated() -> bool:
     return current_user() is not None
