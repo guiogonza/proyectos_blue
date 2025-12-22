@@ -53,12 +53,15 @@ def render():
         path = export_csv([i.dict() for i in items], "proyectos")
         st.toast(f"Exportado a {path}", icon="✅")
 
-    # Tabla (ocultar pm_id)
+    # Tabla (ocultar pm_id y renombrar lider_nombre)
     if items:
         display_items = []
         for i in items:
             item_dict = i.dict()
             item_dict.pop('pm_id', None)  # Ocultar pm_id
+            # Renombrar lider_nombre a Líder para mejor visualización
+            if 'lider_nombre' in item_dict:
+                item_dict['Líder'] = item_dict.pop('lider_nombre') or ""
             display_items.append(item_dict)
         st.dataframe(display_items, use_container_width=True, hide_index=True)
     else:

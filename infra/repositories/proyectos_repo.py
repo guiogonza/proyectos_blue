@@ -100,7 +100,7 @@ def delete_proyecto(pid: int) -> None:
         _log_event(conn, "delete", "proyectos", pid, {"sprints_eliminados": len(sprint_ids)})
 
 def list_proyectos(estado: Optional[str] = None, cliente: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
-    sql = """SELECT p.*, per.nombre as pm_nombre 
+    sql = """SELECT p.*, per.nombre as lider_nombre 
              FROM proyectos p 
              LEFT JOIN personas per ON p.pm_id = per.id"""
     where, params = [], []
