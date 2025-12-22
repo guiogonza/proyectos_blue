@@ -73,6 +73,16 @@ def render():
 
     # ---- Crear ----
     with tab_create:
+        # Lista de países ordenada alfabéticamente
+        PAISES = [
+            "Argentina",
+            "Colombia",
+            "España",
+            "México",
+            "Perú",
+            "Uruguay"
+        ]
+        
         with st.form("form_create_proj", clear_on_submit=True):
             col1, col2 = st.columns([2,2])
             nombre = col1.text_input("Nombre", "")
@@ -85,7 +95,8 @@ def render():
             
             col6, col7, col8 = st.columns([1,1,1])
             costo_est = col6.number_input("Budget", min_value=0.0, value=0.0, step=100000.0, format="%.2f")
-            pais = col7.text_input("País (opcional)", "")
+            pais = col7.selectbox("País", options=["(Sin país)"] + PAISES, index=0)
+            pais_val = None if pais == "(Sin país)" else pais
             categoria = col8.text_input("Categoría (opcional)", "")
             
             col9, col10, col11 = st.columns([1,1,1])
@@ -109,7 +120,7 @@ def render():
                         FECHA_FIN_ESTIMADA=ff,
                         ESTADO=estado_c,
                         BUDGET=costo_est,
-                        PAIS=(pais.strip() or None),
+                        PAIS=pais_val,
                         CATEGORIA=(categoria.strip() or None),
                         LIDER_BLUETAB=(lider_bt.strip() or None),
                         LIDER_CLIENTE=(lider_cl.strip() or None),
@@ -142,7 +153,12 @@ def render():
                 
                 col6, col7, col8 = st.columns([1,1,1])
                 costo_e = col6.number_input("Budget", min_value=0.0, value=float(sel.BUDGET), step=100000.0, format="%.2f")
-                pais_e = col7.text_input("País (opcional)", sel.PAIS or "")
+                # Determinar índice del país actual
+                pais_idx = 0
+                if sel.PAIS and sel.PAIS in PAISES:
+                    pais_idx = PAISES.index(sel.PAIS) + 1
+                pais_e = col7.selectbox("País", options=["(Sin país)"] + PAISES, index=pais_idx)
+                pais_val_e = None if pais_e == "(Sin país)" else pais_e
                 categoria_e = col8.text_input("Categoría (opcional)", sel.CATEGORIA or "")
                 
                 col9, col10, col11 = st.columns([1,1,1])
@@ -167,7 +183,7 @@ def render():
                             FECHA_FIN_ESTIMADA=ff_e,
                             ESTADO=estado_e,
                             BUDGET=costo_e,
-                            PAIS=(pais_e.strip() or None),
+                            PAIS=pais_val_e,
                             CATEGORIA=(categoria_e.strip() or None),
                             LIDER_BLUETAB=(lider_bt_e.strip() or None),
                             LIDER_CLIENTE=(lider_cl_e.strip() or None),
