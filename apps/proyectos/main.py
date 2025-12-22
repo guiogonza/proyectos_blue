@@ -2,7 +2,7 @@
 import streamlit as st
 from datetime import date
 from domain.schemas.proyectos import ProyectoCreate, ProyectoUpdate, ProyectoClose, ESTADOS_PROY
-from domain.services import proyectos_service
+from domain.services import proyectos_service, personas_service
 from shared.utils.exports import export_csv
 from shared.auth.auth import is_admin, get_user_proyectos, can_edit
 
@@ -106,16 +106,19 @@ def render():
             
             fecha_fin = st.date_input("Fecha Fin Real (opcional)", value=None)
             
-            pms = proyectos_service.pms_activos()
-            pm_label = st.selectbox("PM (opcional)", ["(Sin PM)"] + [f"{pid} - {name}" for pid, name in pms.items()])
-            pm_id = None if pm_label == "(Sin PM)" else int(pm_label.split(" - ")[0])
+            # Obtener personas activas para seleccionar líder
+            personas = personas_service.listar(rol=None, solo_activas=True, search=None)
+            personas_opts = {f"{p.nombre}": p.id for p in personas}
+            lider_label = st.selectbox("Líder (opcional)", ["(Sin líder)"] + list(personas_opts.keys()),
+                                       help="Escribe para buscar...")
+            lider_id = None if lider_label == "(Sin líder)" else personas_opts[lider_label]
             
             if st.form_submit_button("Crear"):
                 try:
                     dto = ProyectoCreate(
                         NOMBRE=nombre.strip(),
                         cliente=(cliente.strip() or None),
-                        pm_id=pm_id,
+                        pm_id=lider_id,
                         FECHA_INICIO=fi,
                         FECHA_FIN_ESTIMADA=ff,
                         ESTADO=estado_c,
@@ -168,9 +171,22 @@ def render():
                 
                 fecha_fin_e = st.date_input("Fecha Fin Real (opcional)", value=sel.FECHA_FIN)
                 
-                pms = proyectos_service.pms_activos()
-                pm_label_e = st.selectbox("PM (opcional)", ["(Sin PM)"] + [f"{pid} - {name}" for pid, name in pms.items()], index=0)
-                pm_id_e = None if pm_label_e == "(Sin PM)" else int(pm_label_e.split(" - ")[0])
+                # Obtener personas activas para seleccionar líder
+                personas = personas_service.listar(rol=None, solo_activas=True, search=None)
+                personas_opts = {f"{p.nombre}": p.id for p in personas}
+                # Determinar líder actual
+                lider_actual = "(Sin líder)"
+                if sel.pm_id:
+                    for nombre_p, id_p in personas_opts.items():
+                        if id_p == sel.pm_id:
+                            lider_actual = nombre_p
+                            break
+                lider_idx = 0
+                if lider_actual != "(Sin líder)" and lider_actual in list(personas_opts.keys()):
+                    lider_idx = list(personas_opts.keys()).index(lider_actual) + 1
+                lider_label_e = st.selectbox("Líder (opcional)", ["(Sin líder)"] + list(personas_opts.keys()), 
+                                            index=lider_idx, help="Escribe para buscar...")
+                lider_id_e = None if lider_label_e == "(Sin líder)" else personas_opts[lider_label_e]
                 
                 if st.form_submit_button("Guardar cambios"):
                     try:
@@ -178,7 +194,7 @@ def render():
                             id=sel.id,
                             NOMBRE=nombre_e.strip(),
                             cliente=(cliente_e.strip() or None),
-                            pm_id=pm_id_e,
+                            pm_id=lider_id_e,
                             FECHA_INICIO=fi_e,
                             FECHA_FIN_ESTIMADA=ff_e,
                             ESTADO=estado_e,
