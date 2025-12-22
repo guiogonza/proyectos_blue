@@ -143,7 +143,7 @@ def render():
                     col3, col4, col5 = st.columns([1,1,1])
                     dedicacion = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=40.0, step=1.0, format="%.1f")
                     fi = col4.date_input("Fecha asignacion", value=date.today())
-                    ff = col5.date_input("Fecha fin (opcional)", value=None, min_value=fi)
+                    ff = col5.date_input("Fecha fin (opcional)", value=None)
 
                     if st.form_submit_button("Crear asignacion"):
                         try:
@@ -222,7 +222,7 @@ def render():
                 options2 = {f"{i.id} - {i.persona_nombre} → {i.proyecto_nombre}": i for i in activos}
                 sel_key2 = st.selectbox("Selecciona asignacion a terminar", list(options2.keys()))
                 sel2 = options2[sel_key2]
-                fecha_fin = st.date_input("Fecha fin", value=date.today(), min_value=sel2.fecha_asignacion)
+                fecha_fin = st.date_input("Fecha fin", value=date.today())
                 if st.button("Terminar asignacion"):
                     try:
                         dto = AsignacionEnd(id=sel2.id, fecha_fin=fecha_fin)
