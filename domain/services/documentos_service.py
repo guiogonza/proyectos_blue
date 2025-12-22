@@ -8,12 +8,12 @@ def crear(dto: DocumentoCreate) -> int:
     return documentos_repo.create_documento(
         dto.proyecto_id, dto.nombre_archivo, dto.ruta_archivo,
         dto.descripcion, dto.tamanio_bytes, dto.tipo_mime,
-        dto.valor, dto.fecha_documento
+        dto.valor, dto.iva, dto.fecha_documento
     )
 
 def actualizar(dto: DocumentoUpdate) -> None:
     documentos_repo.update_documento(dto.id, dto.nombre_archivo, dto.descripcion,
-                                     dto.valor, dto.fecha_documento)
+                                     dto.valor, dto.iva, dto.fecha_documento)
 
 def eliminar(doc_id: int) -> None:
     # Obtener documento para eliminar archivo físico

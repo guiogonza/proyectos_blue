@@ -11,6 +11,7 @@ class DocumentoCreate(BaseModel):
     tamanio_bytes: Optional[int] = Field(default=None, ge=0)
     tipo_mime: Optional[str] = Field(default=None, max_length=100)
     valor: Optional[float] = Field(default=None, ge=0)
+    iva: Optional[float] = Field(default=None, ge=0)
     fecha_documento: Optional[date] = None
 
 class DocumentoUpdate(BaseModel):
@@ -18,6 +19,7 @@ class DocumentoUpdate(BaseModel):
     nombre_archivo: str = Field(min_length=1, max_length=255)
     descripcion: Optional[str] = None
     valor: Optional[float] = Field(default=None, ge=0)
+    iva: Optional[float] = Field(default=None, ge=0)
     fecha_documento: Optional[date] = None
 
 class DocumentoListItem(BaseModel):
@@ -31,4 +33,5 @@ class DocumentoListItem(BaseModel):
     tipo_mime: Optional[str]
     fecha_carga: datetime
     valor: Optional[float] = None
+    iva: Optional[float] = None
     fecha_documento: Optional[date] = None

@@ -6,22 +6,23 @@ from infra.db.connection import get_conn
 def create_documento(proyecto_id: int, nombre_archivo: str, ruta_archivo: str, 
                      descripcion: Optional[str] = None, tamanio_bytes: Optional[int] = None,
                      tipo_mime: Optional[str] = None, valor: Optional[float] = None,
-                     fecha_documento: Optional[date] = None) -> int:
+                     iva: Optional[float] = None, fecha_documento: Optional[date] = None) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
             """INSERT INTO documentos 
-               (proyecto_id, nombre_archivo, descripcion, ruta_archivo, tamanio_bytes, tipo_mime, fecha_carga, valor, fecha_documento)
-               VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s)""",
-            (proyecto_id, nombre_archivo, descripcion, ruta_archivo, tamanio_bytes, tipo_mime, valor, fecha_documento)
+               (proyecto_id, nombre_archivo, descripcion, ruta_archivo, tamanio_bytes, tipo_mime, fecha_carga, valor, iva, fecha_documento)
+               VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s)""",
+            (proyecto_id, nombre_archivo, descripcion, ruta_archivo, tamanio_bytes, tipo_mime, valor, iva, fecha_documento)
         )
         return cur.lastrowid
 
 def update_documento(doc_id: int, nombre_archivo: str, descripcion: Optional[str] = None,
-                     valor: Optional[float] = None, fecha_documento: Optional[date] = None) -> None:
+                     valor: Optional[float] = None, iva: Optional[float] = None,
+                     fecha_documento: Optional[date] = None) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "UPDATE documentos SET nombre_archivo=%s, descripcion=%s, valor=%s, fecha_documento=%s WHERE id=%s",
-            (nombre_archivo, descripcion, valor, fecha_documento, doc_id)
+            "UPDATE documentos SET nombre_archivo=%s, descripcion=%s, valor=%s, iva=%s, fecha_documento=%s WHERE id=%s",
+            (nombre_archivo, descripcion, valor, iva, fecha_documento, doc_id)
         )
 
 def delete_documento(doc_id: int) -> None:

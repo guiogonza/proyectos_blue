@@ -65,6 +65,9 @@ if items:
         # Formatear valor
         valor_str = f"${doc.valor:,.2f}" if doc.valor else ""
         
+        # Formatear IVA
+        iva_str = f"${doc.iva:,.2f}" if doc.iva else ""
+        
         # Formatear fecha documento
         fecha_doc_str = doc.fecha_documento.strftime("%Y-%m-%d") if doc.fecha_documento else ""
         
@@ -75,6 +78,7 @@ if items:
             "Ver": f"{API_BASE_URL}/{doc.id}/view",
             "Descripción": doc.descripcion or "",
             "Valor": valor_str,
+            "IVA": iva_str,
             "Fecha Doc": fecha_doc_str,
             "Tamaño": size_str,
             "Fecha Carga": doc.fecha_carga.strftime("%Y-%m-%d %H:%M:%S")
@@ -139,6 +143,8 @@ if can_edit():
             with col_v:
                 valor = st.number_input("Valor", min_value=0.0, value=0.0, step=0.01, format="%.2f",
                                        help="Valor numérico del anexo (acepta decimales)")
+                iva = st.number_input("IVA", min_value=0.0, value=0.0, step=0.01, format="%.2f",
+                                     help="Valor del IVA (acepta decimales)")
             with col_f:
                 fecha_documento = st.date_input("Fecha del documento", value=None,
                                                help="Fecha del documento (puede ser cualquier fecha)")
@@ -183,6 +189,7 @@ if can_edit():
                                 tamanio_bytes=uploaded_file.size,
                                 tipo_mime=uploaded_file.type,
                                 valor=valor if valor > 0 else None,
+                                iva=iva if iva > 0 else None,
                                 fecha_documento=fecha_documento
                             )
                             documentos_service.crear(dto)
@@ -215,6 +222,8 @@ if can_edit():
                 with col_ve:
                     valor_e = st.number_input("Valor", min_value=0.0, value=float(sel.valor or 0.0), step=0.01, format="%.2f",
                                              help="Valor numérico del anexo (acepta decimales)")
+                    iva_e = st.number_input("IVA", min_value=0.0, value=float(sel.iva or 0.0), step=0.01, format="%.2f",
+                                           help="Valor del IVA (acepta decimales)")
                 with col_fe:
                     fecha_doc_e = st.date_input("Fecha del documento", value=sel.fecha_documento,
                                                help="Fecha del documento (puede ser cualquier fecha)")
@@ -229,6 +238,7 @@ if can_edit():
                             nombre_archivo=nombre_e.strip(),
                             descripcion=desc_e.strip() if desc_e.strip() else None,
                             valor=valor_e if valor_e > 0 else None,
+                            iva=iva_e if iva_e > 0 else None,
                             fecha_documento=fecha_doc_e
                         )
                         documentos_service.actualizar(dto)
