@@ -43,7 +43,15 @@ def render():
         with tab_create:
             # Obtener personas para selector de líder
             personas_lider = personas_service.get_personas_para_lider()
-            opciones_lider = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider]
+            opciones_lider = {"(Sin líder directo)": None}
+            for p in personas_lider:
+                opciones_lider[p["nombre"]] = p["id"]
+            
+            # Selector de líder FUERA del formulario para autocompletado
+            lider_sel = st.selectbox("Líder Directo", options=list(opciones_lider.keys()), 
+                                     index=0, key="lider_create",
+                                     help="Escribe para buscar...")
+            lider_id = opciones_lider[lider_sel]
             
             with st.form("form_create", clear_on_submit=True):
                 c1, c2, c3 = st.columns([2,1,1])
@@ -57,16 +65,13 @@ def render():
                 numero_doc = c5.text_input("Número Documento (opcional)", "")
                 numero_contacto = c6.text_input("Número de contacto (opcional)", "")
                 
-                # Tercera fila: país, seniority, líder directo
+                # Tercera fila: país, seniority
                 c7, c8, c9 = st.columns([1,1,1])
                 correo = c7.text_input("Correo electrónico (opcional)", "")
                 pais = c8.text_input("País (opcional)", "")
                 seniority = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, index=0)
                 
-                # Cuarta fila: líder directo
-                lider_idx = st.selectbox("Líder Directo", options=range(len(opciones_lider)), 
-                                         format_func=lambda i: opciones_lider[i][1], index=0)
-                lider_id = opciones_lider[lider_idx][0] if lider_idx > 0 else None
+                st.caption(f"Líder seleccionado: **{lider_sel}**")
                 
                 if st.form_submit_button("Crear"):
                     try:
@@ -99,7 +104,27 @@ def render():
                 sel = options[st.selectbox("Selecciona persona", list(options.keys()))]
                 
                 # Filtrar opciones de líder para excluir la persona actual (evitar auto-referencia)
-                opciones_lider_edit = [(0, "(Sin líder directo)")] + [(p["id"], p["nombre"]) for p in personas_lider if p["id"] != sel.id]
+                opciones_lider_edit = {"(Sin líder directo)": None}
+                for p in personas_lider:
+                    if p["id"] != sel.id:
+                        opciones_lider_edit[p["nombre"]] = p["id"]
+                
+                # Determinar líder actual
+                lider_actual_nombre = "(Sin líder directo)"
+                if sel.LIDER_DIRECTO:
+                    for nombre_l, id_l in opciones_lider_edit.items():
+                        if id_l == sel.LIDER_DIRECTO:
+                            lider_actual_nombre = nombre_l
+                            break
+                
+                # Selector de líder FUERA del formulario para autocompletado
+                lider_idx_e = 0
+                if lider_actual_nombre in list(opciones_lider_edit.keys()):
+                    lider_idx_e = list(opciones_lider_edit.keys()).index(lider_actual_nombre)
+                lider_sel_e = st.selectbox("Líder Directo", options=list(opciones_lider_edit.keys()), 
+                                          index=lider_idx_e, key="lider_edit",
+                                          help="Escribe para buscar...")
+                lider_id_e = opciones_lider_edit[lider_sel_e]
                 
                 with st.form("form_edit"):
                     c1, c2, c3 = st.columns([2,1,1])
@@ -121,17 +146,7 @@ def render():
                     seniority_e = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, 
                                               index=(SENIORITY_PERMITIDOS.index(sel.SENIORITY) if sel.SENIORITY and sel.SENIORITY in SENIORITY_PERMITIDOS else 0))
                     
-                    # Cuarta fila: líder directo
-                    lider_actual_idx = 0
-                    if sel.LIDER_DIRECTO:
-                        for idx, (lid, lnom) in enumerate(opciones_lider_edit):
-                            if lid == sel.LIDER_DIRECTO:
-                                lider_actual_idx = idx
-                                break
-                    
-                    lider_idx_e = st.selectbox("Líder Directo", options=range(len(opciones_lider_edit)), 
-                                              format_func=lambda i: opciones_lider_edit[i][1], index=lider_actual_idx)
-                    lider_id_e = opciones_lider_edit[lider_idx_e][0] if lider_idx_e < len(opciones_lider_edit) and opciones_lider_edit[lider_idx_e][0] > 0 else None
+                    st.caption(f"Líder seleccionado: **{lider_sel_e}**")
                     
                     # Campo de estado activo/inactivo
                     activo_e = st.checkbox("Activo", value=sel.activo, help="Desmarcar para desactivar la persona")

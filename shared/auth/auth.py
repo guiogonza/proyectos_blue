@@ -9,7 +9,7 @@ import time
 
 Role = Literal["admin", "editor", "viewer"]
 SESSION_KEY = "auth_user"
-SESSION_TIMEOUT_MINUTES = 30
+SESSION_TIMEOUT_MINUTES = 30  # 30 minutos de inactividad
 COOKIE_NAME = "project_ops_auth"
 COOKIE_MANAGER_KEY = "_cookie_manager"
 COOKIE_READY_KEY = "_cookie_ready"
