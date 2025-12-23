@@ -8,6 +8,7 @@ class AsignacionCreate(BaseModel):
     persona_id: int
     proyecto_id: int
     sprint_id: Optional[int] = None
+    perfil_id: Optional[int] = None
     dedicacion_horas: float = Field(gt=0, le=160)
     fecha_asignacion: date
     fecha_fin: Optional[date] = None
@@ -31,9 +32,11 @@ class AsignacionListItem(BaseModel):
     persona_id: int
     proyecto_id: int
     sprint_id: Optional[int]
+    perfil_id: Optional[int]
     dedicacion_horas: float
     fecha_asignacion: date
     fecha_fin: Optional[date]
     persona_nombre: str
     proyecto_nombre: str
     sprint_nombre: Optional[str]
+    perfil_nombre: Optional[str]

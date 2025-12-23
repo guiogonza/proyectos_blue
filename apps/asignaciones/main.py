@@ -4,7 +4,7 @@ from datetime import date
 from typing import Optional
 from domain.schemas.asignaciones import AsignacionCreate, AsignacionUpdate, AsignacionEnd
 from domain.services import asignaciones_service
-from infra.repositories import proyectos_repo, personas_repo, sprints_repo
+from infra.repositories import proyectos_repo, personas_repo, sprints_repo, perfiles_repo
 from shared.utils.exports import export_csv
 from shared.auth.auth import is_admin, get_user_proyectos, can_edit
 
@@ -37,8 +37,16 @@ def _sprints_options(proyecto_id: Optional[int] = None):
             options[f"{r['id']} - {r['nombre']} ({r['estado']}){proyecto_info}{actividades_info}"] = r["id"]
     return options
 
+def _perfiles_options():
+    """Obtiene opciones de perfiles activos"""
+    rows = perfiles_repo.get_perfiles_para_asignacion()
+    options = {"(Sin perfil)": None}
+    for r in rows:
+        options[r["nombre"]] = r["id"]
+    return options
+
 def _clean_items_for_display(items):
-    """Elimina persona_id, proyecto_id y sprint_id de los items para mostrar solo los nombres"""
+    """Elimina persona_id, proyecto_id, sprint_id y perfil_id de los items para mostrar solo los nombres"""
     clean_items = []
     for item in items:
         item_dict = item.dict()
@@ -46,6 +54,7 @@ def _clean_items_for_display(items):
         item_dict.pop('persona_id', None)
         item_dict.pop('proyecto_id', None)
         item_dict.pop('sprint_id', None)
+        item_dict.pop('perfil_id', None)
         clean_items.append(item_dict)
     return clean_items
 
@@ -128,8 +137,14 @@ def render():
                     st.write(f"**Persona:** {persona_sel_c}")
                     st.write(f"**Proyecto:** {proyecto_sel_c}")
                     
-                    sprint_fk = st.selectbox("Sprint (opcional)", list(sprint_opts.keys()), 
-                                           help=f"Sprints disponibles para el proyecto seleccionado")
+                    col_sprint_perfil = st.columns(2)
+                    with col_sprint_perfil[0]:
+                        sprint_fk = st.selectbox("Sprint (opcional)", list(sprint_opts.keys()), 
+                                               help=f"Sprints disponibles para el proyecto seleccionado")
+                    with col_sprint_perfil[1]:
+                        perfil_opts = _perfiles_options()
+                        perfil_fk = st.selectbox("Perfil", list(perfil_opts.keys()), 
+                                                help="Selecciona el perfil para esta asignación")
                     
                     # Selectbox de país con autocompletado (escribir para filtrar)
                     pais_seleccionado = st.selectbox(
@@ -151,6 +166,7 @@ def render():
                                 persona_id=p_opts[persona_sel_c],
                                 proyecto_id=pr_opts[proyecto_sel_c],
                                 sprint_id=sprint_opts[sprint_fk],
+                                perfil_id=perfil_opts[perfil_fk],
                                 dedicacion_horas=dedicacion,
                                 fecha_asignacion=fi,
                                 fecha_fin=ff
@@ -185,9 +201,25 @@ def render():
                             if value == sel.sprint_id:
                                 current_sprint_key = key
                                 break
-                    sprint_fk_e = st.selectbox("Sprint (opcional)", list(sprint_opts_e.keys()), 
-                                             index=list(sprint_opts_e.keys()).index(current_sprint_key),
-                                             help=f"Sprints disponibles para el proyecto seleccionado")
+                    
+                    # Perfil selection for editing
+                    perfil_opts_e = _perfiles_options()
+                    current_perfil_key = "(Sin perfil)"
+                    if sel.perfil_id:
+                        for key, value in perfil_opts_e.items():
+                            if value == sel.perfil_id:
+                                current_perfil_key = key
+                                break
+                    
+                    col_sprint_perfil_e = st.columns(2)
+                    with col_sprint_perfil_e[0]:
+                        sprint_fk_e = st.selectbox("Sprint (opcional)", list(sprint_opts_e.keys()), 
+                                                 index=list(sprint_opts_e.keys()).index(current_sprint_key),
+                                                 help=f"Sprints disponibles para el proyecto seleccionado")
+                    with col_sprint_perfil_e[1]:
+                        perfil_fk_e = st.selectbox("Perfil", list(perfil_opts_e.keys()), 
+                                                  index=list(perfil_opts_e.keys()).index(current_perfil_key),
+                                                  help="Selecciona el perfil para esta asignación")
                     
                     col3, col4, col5 = st.columns([1,1,1])
                     dedicacion_e = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=float(sel.dedicacion_horas), step=1.0, format="%.1f")
@@ -201,6 +233,7 @@ def render():
                                 persona_id=p_opts[persona_fk_e],
                                 proyecto_id=pr_opts[proyecto_fk_e],
                                 sprint_id=sprint_opts_e[sprint_fk_e],
+                                perfil_id=perfil_opts_e[perfil_fk_e],
                                 dedicacion_horas=dedicacion_e,
                                 fecha_asignacion=fi_e,
                                 fecha_fin=ff_e

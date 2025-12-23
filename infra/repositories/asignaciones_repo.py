@@ -44,23 +44,23 @@ def exists_proyecto(proyecto_id: int) -> Optional[str]:
 def create_asignacion(data: Dict[str, Any]) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO asignaciones (persona_id, proyecto_id, sprint_id, dedicacion_horas, fecha_asignacion, fecha_fin) "
-            "VALUES (%s,%s,%s,%s,%s,%s)",
-            (data["persona_id"], data["proyecto_id"], data.get("sprint_id"),
+            "INSERT INTO asignaciones (persona_id, proyecto_id, sprint_id, perfil_id, dedicacion_horas, fecha_asignacion, fecha_fin) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            (data["persona_id"], data["proyecto_id"], data.get("sprint_id"), data.get("perfil_id"),
              data["dedicacion_horas"], data["fecha_asignacion"], data.get("fecha_fin"))
         )
         aid = cur.lastrowid
-        _log_event(conn, "create", aid, {"persona_id": data["persona_id"], "proyecto_id": data["proyecto_id"], "dedicacion_horas": data["dedicacion_horas"]})
+        _log_event(conn, "create", aid, {"persona_id": data["persona_id"], "proyecto_id": data["proyecto_id"], "perfil_id": data.get("perfil_id"), "dedicacion_horas": data["dedicacion_horas"]})
         return aid
 
 def update_asignacion(aid: int, data: Dict[str, Any]) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "UPDATE asignaciones SET persona_id=%s, proyecto_id=%s, sprint_id=%s, dedicacion_horas=%s, fecha_asignacion=%s, fecha_fin=%s WHERE id=%s",
-            (data["persona_id"], data["proyecto_id"], data.get("sprint_id"),
+            "UPDATE asignaciones SET persona_id=%s, proyecto_id=%s, sprint_id=%s, perfil_id=%s, dedicacion_horas=%s, fecha_asignacion=%s, fecha_fin=%s WHERE id=%s",
+            (data["persona_id"], data["proyecto_id"], data.get("sprint_id"), data.get("perfil_id"),
              data["dedicacion_horas"], data["fecha_asignacion"], data.get("fecha_fin"), aid)
         )
-        _log_event(conn, "update", aid, {"dedicacion_horas": data["dedicacion_horas"]})
+        _log_event(conn, "update", aid, {"perfil_id": data.get("perfil_id"), "dedicacion_horas": data["dedicacion_horas"]})
 
 def end_asignacion(aid: int, fecha_fin) -> None:
     with get_conn() as conn, conn.cursor() as cur:
@@ -74,11 +74,12 @@ def delete_asignacion(aid: int) -> None:
 
 # ---- Listados ----
 def list_asignaciones(persona_id: Optional[int] = None, proyecto_id: Optional[int] = None, solo_activas: Optional[bool] = None) -> List[Dict[str, Any]]:
-    sql = ( "SELECT a.*, p.nombre AS persona_nombre, pr.nombre AS proyecto_nombre, s.nombre AS sprint_nombre "
+    sql = ( "SELECT a.*, p.nombre AS persona_nombre, pr.nombre AS proyecto_nombre, s.nombre AS sprint_nombre, pf.nombre AS perfil_nombre "
             "FROM asignaciones a "
             "JOIN personas p ON p.id=a.persona_id "
             "JOIN proyectos pr ON pr.id=a.proyecto_id "
-            "LEFT JOIN sprints s ON s.id=a.sprint_id " )
+            "LEFT JOIN sprints s ON s.id=a.sprint_id "
+            "LEFT JOIN perfiles pf ON pf.id=a.perfil_id " )
     where, params = [], []
     if persona_id:
         where.append("a.persona_id=%s"); params.append(persona_id)

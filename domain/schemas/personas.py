@@ -25,6 +25,7 @@ class PersonaCreate(BaseModel):
     SENIORITY: Optional[str] = None
     LIDER_DIRECTO: Optional[int] = None
     TIPO_DOCUMENTO: Optional[str] = None
+    vigencia: Optional[int] = Field(default=None, ge=1900, le=2100)
 
     @validator("ROL_PRINCIPAL")
     def validar_rol(cls, v):
@@ -72,3 +73,4 @@ class PersonaListItem(BaseModel):
     LIDER_DIRECTO: Optional[int]
     LIDER_NOMBRE: Optional[str] = None  # Para mostrar el nombre del líder
     TIPO_DOCUMENTO: Optional[str]
+    vigencia: Optional[int]

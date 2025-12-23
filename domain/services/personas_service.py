@@ -10,7 +10,7 @@ def crear(dto: PersonaCreate) -> int:
     return personas_repo.create_persona(
         dto.nombre, dto.ROL_PRINCIPAL, dto.COSTO_RECURSO, 
         dto.NUMERO_DOCUMENTO, dto.numero_contacto, dto.correo,
-        dto.PAIS, dto.SENIORITY, dto.LIDER_DIRECTO, dto.TIPO_DOCUMENTO, True
+        dto.PAIS, dto.SENIORITY, dto.LIDER_DIRECTO, dto.TIPO_DOCUMENTO, True, dto.vigencia
     )
 
 def actualizar(dto: PersonaUpdate) -> None:
@@ -19,7 +19,7 @@ def actualizar(dto: PersonaUpdate) -> None:
     personas_repo.update_persona(
         dto.id, dto.nombre, dto.ROL_PRINCIPAL, dto.COSTO_RECURSO,
         dto.NUMERO_DOCUMENTO, dto.numero_contacto, dto.correo,
-        dto.PAIS, dto.SENIORITY, dto.LIDER_DIRECTO, dto.TIPO_DOCUMENTO, dto.activo
+        dto.PAIS, dto.SENIORITY, dto.LIDER_DIRECTO, dto.TIPO_DOCUMENTO, dto.activo, dto.vigencia
     )
 
 def cambiar_estado(persona_id: int, activo: bool) -> None:
@@ -41,6 +41,7 @@ def listar(rol: Optional[str] = None, solo_activas: Optional[bool] = None, searc
         "LIDER_DIRECTO": r.get("LIDER_DIRECTO"),
         "LIDER_NOMBRE": r.get("LIDER_NOMBRE"),
         "TIPO_DOCUMENTO": r.get("TIPO_DOCUMENTO"),
+        "vigencia": r.get("vigencia"),
     }) for r in rows]
 
 def get_personas_para_lider() -> List[Dict[str, Any]]:

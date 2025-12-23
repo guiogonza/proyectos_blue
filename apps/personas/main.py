@@ -1,6 +1,7 @@
 # apps/personas/main.py
 
 import streamlit as st
+from datetime import date
 from domain.schemas.personas import PersonaCreate, PersonaUpdate, ROLES_PERMITIDOS, SENIORITY_PERMITIDOS, TIPOS_DOCUMENTO_PERMITIDOS
 from domain.services import personas_service
 from shared.utils.exports import export_csv
@@ -72,6 +73,11 @@ def render():
                 pais = c8.text_input("País (opcional)", "")
                 seniority = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, index=0)
                 
+                # Cuarta fila: vigencia
+                c10, _, _ = st.columns([1,1,1])
+                vigencia = c10.number_input("Vigencia (año)", min_value=1900, max_value=2100, value=date.today().year, step=1,
+                                           help="Año de vigencia del colaborador")
+                
                 st.caption(f"Líder seleccionado: **{lider_sel or 'Sin líder'}**")
                 
                 if st.form_submit_button("Crear"):
@@ -86,7 +92,8 @@ def render():
                             PAIS=pais.strip() if pais.strip() else None,
                             SENIORITY=seniority,
                             LIDER_DIRECTO=lider_id,
-                            TIPO_DOCUMENTO=tipo_doc
+                            TIPO_DOCUMENTO=tipo_doc,
+                            vigencia=vigencia
                         )
                         personas_service.crear(dto)
                         st.success("Creada")
@@ -147,6 +154,12 @@ def render():
                     seniority_e = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, 
                                               index=(SENIORITY_PERMITIDOS.index(sel.SENIORITY) if sel.SENIORITY and sel.SENIORITY in SENIORITY_PERMITIDOS else 0))
                     
+                    # Cuarta fila: vigencia
+                    c10, _, _ = st.columns([1,1,1])
+                    vigencia_e = c10.number_input("Vigencia (año)", min_value=1900, max_value=2100, 
+                                                  value=int(sel.vigencia) if sel.vigencia else date.today().year, step=1,
+                                                  help="Año de vigencia del colaborador")
+                    
                     st.caption(f"Líder seleccionado: **{lider_sel_e or 'Sin líder'}**")
                     
                     # Campo de estado activo/inactivo
@@ -166,7 +179,8 @@ def render():
                                 SENIORITY=seniority_e,
                                 LIDER_DIRECTO=lider_id_e,
                                 TIPO_DOCUMENTO=tipo_doc_e,
-                                activo=activo_e
+                                activo=activo_e,
+                                vigencia=vigencia_e
                             )
                             personas_service.actualizar(dto)
                             st.success("Cambios guardados")

@@ -44,32 +44,32 @@ def create_persona(nombre: str, ROL_PRINCIPAL: str, COSTO_RECURSO: Optional[floa
                   NUMERO_DOCUMENTO: Optional[str] = None, numero_contacto: Optional[str] = None,
                   correo: Optional[str] = None, PAIS: Optional[str] = None, SENIORITY: Optional[str] = None,
                   LIDER_DIRECTO: Optional[int] = None, TIPO_DOCUMENTO: Optional[str] = None, 
-                  activo: bool = True) -> int:
+                  activo: bool = True, vigencia: Optional[int] = None) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
             "INSERT INTO personas (nombre, ROL_PRINCIPAL, COSTO_RECURSO, NUMERO_DOCUMENTO, numero_contacto, correo, "
-            "PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, activo) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, activo, vigencia) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (nombre, ROL_PRINCIPAL, COSTO_RECURSO, NUMERO_DOCUMENTO, numero_contacto, correo, 
-             PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, 1 if activo else 0)
+             PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, 1 if activo else 0, vigencia)
         )
         persona_id = cur.lastrowid
-        _log_event(conn, "create", "personas", persona_id, {"nombre": nombre, "ROL_PRINCIPAL": ROL_PRINCIPAL})
+        _log_event(conn, "create", "personas", persona_id, {"nombre": nombre, "ROL_PRINCIPAL": ROL_PRINCIPAL, "vigencia": vigencia})
         return persona_id
 
 def update_persona(persona_id: int, nombre: str, ROL_PRINCIPAL: str, COSTO_RECURSO: Optional[float],
                   NUMERO_DOCUMENTO: Optional[str] = None, numero_contacto: Optional[str] = None,
                   correo: Optional[str] = None, PAIS: Optional[str] = None, SENIORITY: Optional[str] = None,
                   LIDER_DIRECTO: Optional[int] = None, TIPO_DOCUMENTO: Optional[str] = None,
-                  activo: bool = True) -> None:
+                  activo: bool = True, vigencia: Optional[int] = None) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
             "UPDATE personas SET nombre=%s, ROL_PRINCIPAL=%s, COSTO_RECURSO=%s, NUMERO_DOCUMENTO=%s, "
-            "numero_contacto=%s, correo=%s, PAIS=%s, SENIORITY=%s, LIDER_DIRECTO=%s, TIPO_DOCUMENTO=%s, activo=%s WHERE id=%s",
+            "numero_contacto=%s, correo=%s, PAIS=%s, SENIORITY=%s, LIDER_DIRECTO=%s, TIPO_DOCUMENTO=%s, activo=%s, vigencia=%s WHERE id=%s",
             (nombre, ROL_PRINCIPAL, COSTO_RECURSO, NUMERO_DOCUMENTO, numero_contacto, correo,
-             PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, 1 if activo else 0, persona_id)
+             PAIS, SENIORITY, LIDER_DIRECTO, TIPO_DOCUMENTO, 1 if activo else 0, vigencia, persona_id)
         )
-        _log_event(conn, "update", "personas", persona_id, {"nombre": nombre, "ROL_PRINCIPAL": ROL_PRINCIPAL, "activo": activo})
+        _log_event(conn, "update", "personas", persona_id, {"nombre": nombre, "ROL_PRINCIPAL": ROL_PRINCIPAL, "activo": activo, "vigencia": vigencia})
 
 def set_activo(persona_id: int, activo: bool) -> None:
     with get_conn() as conn, conn.cursor() as cur:
