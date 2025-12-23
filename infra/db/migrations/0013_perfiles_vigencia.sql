@@ -9,13 +9,26 @@ CREATE TABLE IF NOT EXISTS perfiles (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Agregar campo vigencia (año) en personas
-ALTER TABLE personas ADD COLUMN IF NOT EXISTS vigencia INT NULL;
+-- Agregar campo vigencia (año) en personas (ignorar error si ya existe)
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'personas' AND COLUMN_NAME = 'vigencia');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE personas ADD COLUMN vigencia INT NULL', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Agregar campo perfil_id en asignaciones
-ALTER TABLE asignaciones ADD COLUMN IF NOT EXISTS perfil_id BIGINT NULL;
-ALTER TABLE asignaciones ADD CONSTRAINT fk_asignaciones_perfil 
-  FOREIGN KEY (perfil_id) REFERENCES perfiles(id) ON DELETE SET NULL;
+-- Agregar campo perfil_id en asignaciones (ignorar error si ya existe)
+SET @col_exists2 = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'asignaciones' AND COLUMN_NAME = 'perfil_id');
+SET @sql2 = IF(@col_exists2 = 0, 'ALTER TABLE asignaciones ADD COLUMN perfil_id BIGINT NULL', 'SELECT 1');
+PREPARE stmt2 FROM @sql2;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;
+
+-- Agregar FK si no existe
+SET @fk_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'asignaciones' AND CONSTRAINT_NAME = 'fk_asignaciones_perfil');
+SET @sql3 = IF(@fk_exists = 0, 'ALTER TABLE asignaciones ADD CONSTRAINT fk_asignaciones_perfil FOREIGN KEY (perfil_id) REFERENCES perfiles(id) ON DELETE SET NULL', 'SELECT 1');
+PREPARE stmt3 FROM @sql3;
+EXECUTE stmt3;
+DEALLOCATE PREPARE stmt3;
 
 -- Insertar perfiles predefinidos
 INSERT INTO perfiles (nombre) VALUES
