@@ -48,9 +48,29 @@ st.success(f"Total: {len(items)} anexo(s)")
 API_BASE_URL = "http://164.68.118.86:8502/api/documentos"
 
 if items:
+    # Opciones de paginación
+    col_pag1, col_pag2, col_pag3 = st.columns([1, 1, 2])
+    with col_pag1:
+        registros_por_pagina = st.selectbox("Registros por página", [10, 20, 50, 100], index=0)
+    
+    # Calcular paginación
+    total_registros = len(items)
+    total_paginas = (total_registros + registros_por_pagina - 1) // registros_por_pagina
+    
+    with col_pag2:
+        pagina_actual = st.number_input("Página", min_value=1, max_value=max(1, total_paginas), value=1, step=1)
+    
+    with col_pag3:
+        st.caption(f"Mostrando página {pagina_actual} de {total_paginas}")
+    
+    # Aplicar paginación
+    inicio = (pagina_actual - 1) * registros_por_pagina
+    fin = inicio + registros_por_pagina
+    items_pagina = items[inicio:fin]
+    
     # Preparar datos para mostrar
     display_data = []
-    for doc in items:
+    for doc in items_pagina:
         # Formatear tamaño
         if doc.tamanio_bytes:
             if doc.tamanio_bytes < 1024:
@@ -97,23 +117,6 @@ if items:
             )
         }
     )
-    
-    # Botones para descargar documentos
-    st.markdown("#### 📥 Descargar Documentos")
-    cols = st.columns(4)
-    for idx, doc in enumerate(items):
-        with cols[idx % 4]:
-            if os.path.exists(doc.ruta_archivo):
-                with open(doc.ruta_archivo, "rb") as f:
-                    st.download_button(
-                        label=f"📄 {doc.nombre_archivo[:20]}.." if len(doc.nombre_archivo) > 20 else f"📄 {doc.nombre_archivo}",
-                        data=f.read(),
-                        file_name=doc.nombre_archivo,
-                        mime=doc.tipo_mime or "application/octet-stream",
-                        key=f"download_{doc.id}"
-                    )
-            else:
-                st.caption(f"❌ {doc.nombre_archivo} (no encontrado)")
 else:
     st.info("No hay documentos con los filtros seleccionados.")
 

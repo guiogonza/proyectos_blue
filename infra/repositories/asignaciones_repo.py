@@ -44,23 +44,23 @@ def exists_proyecto(proyecto_id: int) -> Optional[str]:
 def create_asignacion(data: Dict[str, Any]) -> int:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO asignaciones (persona_id, proyecto_id, sprint_id, perfil_id, dedicacion_horas, fecha_asignacion, fecha_fin) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            "INSERT INTO asignaciones (persona_id, proyecto_id, sprint_id, perfil_id, dedicacion_horas, tarifa, fecha_asignacion, fecha_fin) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
             (data["persona_id"], data["proyecto_id"], data.get("sprint_id"), data.get("perfil_id"),
-             data["dedicacion_horas"], data["fecha_asignacion"], data.get("fecha_fin"))
+             data["dedicacion_horas"], data.get("tarifa"), data["fecha_asignacion"], data.get("fecha_fin"))
         )
         aid = cur.lastrowid
-        _log_event(conn, "create", aid, {"persona_id": data["persona_id"], "proyecto_id": data["proyecto_id"], "perfil_id": data.get("perfil_id"), "dedicacion_horas": data["dedicacion_horas"]})
+        _log_event(conn, "create", aid, {"persona_id": data["persona_id"], "proyecto_id": data["proyecto_id"], "perfil_id": data.get("perfil_id"), "dedicacion_horas": data["dedicacion_horas"], "tarifa": data.get("tarifa")})
         return aid
 
 def update_asignacion(aid: int, data: Dict[str, Any]) -> None:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "UPDATE asignaciones SET persona_id=%s, proyecto_id=%s, sprint_id=%s, perfil_id=%s, dedicacion_horas=%s, fecha_asignacion=%s, fecha_fin=%s WHERE id=%s",
+            "UPDATE asignaciones SET persona_id=%s, proyecto_id=%s, sprint_id=%s, perfil_id=%s, dedicacion_horas=%s, tarifa=%s, fecha_asignacion=%s, fecha_fin=%s WHERE id=%s",
             (data["persona_id"], data["proyecto_id"], data.get("sprint_id"), data.get("perfil_id"),
-             data["dedicacion_horas"], data["fecha_asignacion"], data.get("fecha_fin"), aid)
+             data["dedicacion_horas"], data.get("tarifa"), data["fecha_asignacion"], data.get("fecha_fin"), aid)
         )
-        _log_event(conn, "update", aid, {"perfil_id": data.get("perfil_id"), "dedicacion_horas": data["dedicacion_horas"]})
+        _log_event(conn, "update", aid, {"perfil_id": data.get("perfil_id"), "dedicacion_horas": data["dedicacion_horas"], "tarifa": data.get("tarifa")})
 
 def end_asignacion(aid: int, fecha_fin) -> None:
     with get_conn() as conn, conn.cursor() as cur:

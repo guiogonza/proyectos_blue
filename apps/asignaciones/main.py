@@ -4,16 +4,19 @@ from datetime import date
 from typing import Optional
 from domain.schemas.asignaciones import AsignacionCreate, AsignacionUpdate, AsignacionEnd
 from domain.services import asignaciones_service
-from infra.repositories import proyectos_repo, personas_repo, sprints_repo, perfiles_repo
+from infra.repositories.proyectos_repo import list_proyectos
+from infra.repositories.personas_repo import list_personas
+from infra.repositories.sprints_repo import list_sprints
+from infra.repositories.perfiles_repo import get_perfiles_para_asignacion
 from shared.utils.exports import export_csv
 from shared.auth.auth import is_admin, get_user_proyectos, can_edit
 
 def _personas_options():
-    rows = personas_repo.list_personas(None, True, None)
+    rows = list_personas(None, True, None)
     return {f"{r['id']} - {r['nombre']} ({r['ROL_PRINCIPAL']})": r["id"] for r in rows}
 
 def _proyectos_options():
-    rows = proyectos_repo.list_proyectos(estado=None, cliente=None, search=None)
+    rows = list_proyectos(estado=None, cliente=None, search=None)
     proyectos_permitidos = get_user_proyectos()
     
     options = {}
@@ -27,11 +30,11 @@ def _proyectos_options():
 
 def _sprints_options(proyecto_id: Optional[int] = None):
     """Obtiene opciones de sprints, filtrados por proyecto si se especifica"""
-    rows = sprints_repo.list_sprints(proyecto_id=proyecto_id, estado=None, search=None)
+    rows = list_sprints(proyecto_id=proyecto_id, estado=None, search=None)
     options = {"(Sin sprint)": None}
     for r in rows:
         if r["estado"] != "Cerrado":
-            # Incluir informaci�n del proyecto y actividades si est�n disponibles
+            # Incluir información del proyecto y actividades si están disponibles
             proyecto_info = f" - Proyecto {r.get('proyecto_id', '')}" if not proyecto_id else ""
             actividades_info = f" - {r.get('actividades', '')[:30]}..." if r.get('actividades') else ""
             options[f"{r['id']} - {r['nombre']} ({r['estado']}){proyecto_info}{actividades_info}"] = r["id"]
@@ -39,7 +42,7 @@ def _sprints_options(proyecto_id: Optional[int] = None):
 
 def _perfiles_options():
     """Obtiene opciones de perfiles activos"""
-    rows = perfiles_repo.get_perfiles_para_asignacion()
+    rows = get_perfiles_para_asignacion()
     options = {"(Sin perfil)": None}
     for r in rows:
         options[r["nombre"]] = r["id"]
@@ -157,8 +160,9 @@ def render():
                     
                     col3, col4, col5 = st.columns([1,1,1])
                     dedicacion = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=40.0, step=1.0, format="%.1f")
-                    fi = col4.date_input("Fecha asignacion", value=date.today())
-                    ff = col5.date_input("Fecha fin (opcional)", value=None)
+                    tarifa = col4.number_input("Tarifa", min_value=0.0, value=0.0, step=0.01, format="%.2f", help="Tarifa por hora")
+                    fi = col5.date_input("Fecha asignacion", value=date.today())
+                    ff = st.date_input("Fecha fin (opcional)", value=None)
 
                     if st.form_submit_button("Crear asignacion"):
                         try:
@@ -168,6 +172,7 @@ def render():
                                 sprint_id=sprint_opts[sprint_fk],
                                 perfil_id=perfil_opts[perfil_fk],
                                 dedicacion_horas=dedicacion,
+                                tarifa=tarifa if tarifa > 0 else None,
                                 fecha_asignacion=fi,
                                 fecha_fin=ff
                             )
@@ -223,8 +228,9 @@ def render():
                     
                     col3, col4, col5 = st.columns([1,1,1])
                     dedicacion_e = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=float(sel.dedicacion_horas), step=1.0, format="%.1f")
-                    fi_e = col4.date_input("Fecha asignacion", value=sel.fecha_asignacion)
-                    ff_e = col5.date_input("Fecha fin (opcional)", value=sel.fecha_fin) if st.checkbox("Modificar fecha fin", value=bool(sel.fecha_fin)) else sel.fecha_fin
+                    tarifa_e = col4.number_input("Tarifa", min_value=0.0, value=float(sel.tarifa) if sel.tarifa else 0.0, step=0.01, format="%.2f", help="Tarifa por hora")
+                    fi_e = col5.date_input("Fecha asignacion", value=sel.fecha_asignacion)
+                    ff_e = st.date_input("Fecha fin (opcional)", value=sel.fecha_fin) if st.checkbox("Modificar fecha fin", value=bool(sel.fecha_fin)) else sel.fecha_fin
 
                     if st.form_submit_button("Guardar cambios"):
                         try:
@@ -235,6 +241,7 @@ def render():
                                 sprint_id=sprint_opts_e[sprint_fk_e],
                                 perfil_id=perfil_opts_e[perfil_fk_e],
                                 dedicacion_horas=dedicacion_e,
+                                tarifa=tarifa_e if tarifa_e > 0 else None,
                                 fecha_asignacion=fi_e,
                                 fecha_fin=ff_e
                             )

@@ -10,6 +10,7 @@ class AsignacionCreate(BaseModel):
     sprint_id: Optional[int] = None
     perfil_id: Optional[int] = None
     dedicacion_horas: float = Field(gt=0, le=160)
+    tarifa: Optional[float] = Field(default=None, ge=0)
     fecha_asignacion: date
     fecha_fin: Optional[date] = None
 
@@ -34,6 +35,7 @@ class AsignacionListItem(BaseModel):
     sprint_id: Optional[int]
     perfil_id: Optional[int]
     dedicacion_horas: float
+    tarifa: Optional[float]
     fecha_asignacion: date
     fecha_fin: Optional[date]
     persona_nombre: str

@@ -24,6 +24,7 @@ from domain.schemas.proyectos import ProyectoListItem
 from domain.schemas.sprints import SprintListItem
 from domain.schemas.asignaciones import AsignacionListItem
 from domain.schemas.usuarios import UsuarioListItem
+from domain.schemas.documentos import DocumentoListItem
 
 app = FastAPI(
     title="Project Ops API - Read Only",
@@ -161,6 +162,59 @@ def health_check():
     """Verificar estado de la API"""
     return {"status": "ok", "service": "Project Ops API"}
 
+# ==================== ANEXOS (DOCUMENTOS) ====================
+@app.get("/api/anexos", response_model=List[DocumentoListItem], tags=["Anexos"])
+def listar_anexos(
+    proyecto_id: Optional[int] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Obtener lista de anexos/documentos.
+    - proyecto_id: Filtrar por proyecto específico
+    - search: Buscar por nombre o descripción
+    
+    Retorna información completa de cada anexo incluyendo URLs para ver/descargar.
+    """
+    items = documentos_service.listar(proyecto_id=proyecto_id, search=search)
+    return items
+
+@app.get("/api/anexos/proyecto/{proyecto_id}", tags=["Anexos"])
+def listar_anexos_por_proyecto(
+    proyecto_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Obtener todos los anexos de un proyecto específico con URLs de acceso.
+    Retorna la información de la tabla y links para ver cada documento.
+    """
+    items = documentos_service.listar(proyecto_id=proyecto_id)
+    
+    # Construir respuesta con URLs de acceso
+    result = []
+    for doc in items:
+        doc_dict = doc.dict()
+        doc_dict["url_ver"] = f"/api/documentos/{doc.id}/view"
+        doc_dict["url_descargar"] = f"/api/documentos/{doc.id}/download"
+        result.append(doc_dict)
+    
+    return {
+        "proyecto_id": proyecto_id,
+        "total_anexos": len(result),
+        "anexos": result
+    }
+
+@app.get("/api/anexos/{anexo_id}", response_model=DocumentoListItem, tags=["Anexos"])
+def obtener_anexo(
+    anexo_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Obtener un anexo por ID"""
+    doc = documentos_service.obtener(anexo_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Anexo no encontrado")
+    return doc
+
 # ==================== DOCUMENTOS ====================
 @app.get("/api/documentos/{documento_id}/download", tags=["Documentos"])
 def descargar_documento(documento_id: int):
@@ -210,6 +264,8 @@ def root():
             "proyectos": "/api/proyectos",
             "sprints": "/api/sprints",
             "asignaciones": "/api/asignaciones",
-            "usuarios": "/api/usuarios"
+            "usuarios": "/api/usuarios",
+            "anexos": "/api/anexos",
+            "anexos_por_proyecto": "/api/anexos/proyecto/{proyecto_id}"
         }
     }
