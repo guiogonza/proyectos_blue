@@ -24,10 +24,10 @@ def _validar_carga(persona_id: int, nueva_dedicacion: float) -> Dict[str, Any]:
         "total_horas_post": total_post,
         "num_proyectos_actual": n_proj,
         "over_projects": n_proj + 1 > overload_threshold,  # si añade nuevo proyecto
-        "over_160": total_post > 160.0
+        "over_500": total_post > 500.0
     }
-    if res["over_160"]:
-        raise ValueError(f"Dedicación excede 160 horas (actual {total_horas:.2f}h + nueva {nueva_dedicacion:.2f}h).")
+    if res["over_500"]:
+        raise ValueError(f"Dedicación excede 500 horas (actual {total_horas:.2f}h + nueva {nueva_dedicacion:.2f}h).")
     return res
 
 def crear(dto: AsignacionCreate) -> Dict[str, Any]:
