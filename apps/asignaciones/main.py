@@ -117,72 +117,109 @@ def render():
             if not p_opts or not pr_opts:
                 st.warning("No hay personas o proyectos disponibles para crear asignaciones.")
             else:
-                # Selección de proyecto fuera del formulario para filtrar sprints
+                # Selección de persona y proyecto
                 col1, col2 = st.columns(2)
                 persona_sel_c = col1.selectbox("Persona", list(p_opts.keys()), key="persona_create")
                 proyecto_sel_c = col2.selectbox("Proyecto", list(pr_opts.keys()), key="proyecto_create")
-                
-                # Sprint selection - filtrado por el proyecto seleccionado
+
+                # Sprint y Perfil
                 proyecto_id_sel = pr_opts[proyecto_sel_c]
                 sprint_opts = _sprints_options(proyecto_id_sel)
-                
-                # Lista de países ordenada alfabéticamente
-                PAISES = sorted([
-                    "Argentina",
-                    "Colombia",
-                    "España",
-                    "México",
-                    "Perú",
-                    "Uruguay"
-                ])
-                
-                with st.form("form_create_asig", clear_on_submit=True):
-                    st.write(f"**Persona:** {persona_sel_c}")
-                    st.write(f"**Proyecto:** {proyecto_sel_c}")
-                    
-                    col_sprint_perfil = st.columns(2)
-                    with col_sprint_perfil[0]:
-                        sprint_fk = st.selectbox("Sprint (opcional)", list(sprint_opts.keys()), 
-                                               help=f"Sprints disponibles para el proyecto seleccionado")
-                    with col_sprint_perfil[1]:
-                        perfil_opts = _perfiles_options()
-                        perfil_fk = st.selectbox("Perfil", list(perfil_opts.keys()), 
-                                                help="Selecciona el perfil para esta asignación")
-                    
-                    # Selectbox de país con autocompletado (escribir para filtrar)
-                    pais_seleccionado = st.selectbox(
-                        "País",
-                        options=PAISES,
-                        index=None,
-                        placeholder="Escribe para buscar un país...",
-                        help="Selecciona el país de la asignación"
-                    )
-                    
-                    col3, col4, col5 = st.columns([1,1,1])
-                    dedicacion = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=40.0, step=1.0, format="%.1f")
-                    tarifa = col4.number_input("Tarifa", min_value=0.0, value=0.0, step=0.01, format="%.2f", help="Tarifa por hora")
-                    fi = col5.date_input("Fecha asignacion", value=date.today())
-                    ff = st.date_input("Fecha fin (opcional)", value=None)
 
-                    if st.form_submit_button("Crear asignacion"):
-                        try:
+                col_sprint_perfil = st.columns(2)
+                with col_sprint_perfil[0]:
+                    sprint_fk = st.selectbox("Sprint (opcional)", list(sprint_opts.keys()),
+                                             help="Sprints disponibles para el proyecto seleccionado")
+                with col_sprint_perfil[1]:
+                    perfil_opts = _perfiles_options()
+                    perfil_fk = st.selectbox("Perfil", list(perfil_opts.keys()),
+                                             help="Selecciona el perfil para esta asignación")
+
+                # País
+                PAISES = sorted(["Argentina", "Colombia", "España", "México", "Perú", "Uruguay"])
+                pais_seleccionado = st.selectbox(
+                    "País", options=PAISES, index=None,
+                    placeholder="Escribe para buscar un país...",
+                    help="Selecciona el país de la asignación"
+                )
+
+                st.markdown("---")
+
+                # --- Filas dinámicas de asignación ---
+                if "create_row_ids" not in st.session_state:
+                    st.session_state.create_row_ids = [0]
+                    st.session_state.create_row_next_id = 1
+
+                # Encabezados
+                h1, h2, h3, h4, h5 = st.columns([1, 1, 0.7, 0.7, 0.3])
+                h1.markdown("**Fecha inicio**")
+                h2.markdown("**Fecha fin**")
+                h3.markdown("**Dedicación (h)**")
+                h4.markdown("**Tarifa**")
+                h5.markdown("")
+
+                # Renderizar cada fila
+                row_to_delete = None
+                for rid in st.session_state.create_row_ids:
+                    c1, c2, c3, c4, c5 = st.columns([1, 1, 0.7, 0.7, 0.3])
+                    with c1:
+                        st.date_input("fi", value=date.today(), key=f"cr_fi_{rid}", label_visibility="collapsed")
+                    with c2:
+                        st.date_input("ff", value=None, key=f"cr_ff_{rid}", label_visibility="collapsed")
+                    with c3:
+                        st.number_input("ded", min_value=1.0, max_value=200.0, value=40.0,
+                                        step=1.0, format="%.1f", key=f"cr_ded_{rid}", label_visibility="collapsed")
+                    with c4:
+                        st.number_input("tar", min_value=0.0, value=0.0,
+                                        step=0.01, format="%.2f", key=f"cr_tar_{rid}", label_visibility="collapsed")
+                    with c5:
+                        if len(st.session_state.create_row_ids) > 1:
+                            if st.button("🗑️", key=f"cr_del_{rid}"):
+                                row_to_delete = rid
+
+                if row_to_delete is not None:
+                    st.session_state.create_row_ids.remove(row_to_delete)
+                    st.rerun()
+
+                # Botón agregar línea
+                if st.button("➕ Agregar línea"):
+                    st.session_state.create_row_ids.append(st.session_state.create_row_next_id)
+                    st.session_state.create_row_next_id += 1
+                    st.rerun()
+
+                st.markdown("")
+
+                # Botón crear
+                if st.button("✅ Crear asignaciones", type="primary"):
+                    try:
+                        created_ids = []
+                        last_info = None
+                        for rid in st.session_state.create_row_ids:
+                            fi = st.session_state[f"cr_fi_{rid}"]
+                            ff = st.session_state.get(f"cr_ff_{rid}")
+                            ded = st.session_state[f"cr_ded_{rid}"]
+                            tar = st.session_state[f"cr_tar_{rid}"]
                             dto = AsignacionCreate(
                                 persona_id=p_opts[persona_sel_c],
                                 proyecto_id=pr_opts[proyecto_sel_c],
                                 sprint_id=sprint_opts[sprint_fk],
                                 perfil_id=perfil_opts[perfil_fk],
-                                dedicacion_horas=dedicacion,
-                                tarifa=tarifa if tarifa > 0 else None,
+                                dedicacion_horas=ded,
+                                tarifa=tar if tar > 0 else None,
                                 fecha_asignacion=fi,
                                 fecha_fin=ff
                             )
-                            info = asignaciones_service.crear(dto)
-                            if info.get("over_projects"):
-                                st.warning("La persona quedaria en mas proyectos que el umbral configurado (OVERLOAD_PROJECTS_THRESHOLD).")
-                            st.success(f"Asignacion creada (ID {info['asignacion_id']}). Carga post: {info['total_horas_post']:.1f}h")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(str(e))
+                            last_info = asignaciones_service.crear(dto)
+                            created_ids.append(last_info['asignacion_id'])
+                            if last_info.get("over_projects"):
+                                st.warning("La persona quedaría en más proyectos que el umbral configurado.")
+
+                        st.success(f"Se crearon {len(created_ids)} asignación(es) — IDs: {created_ids}. Carga post: {last_info['total_horas_post']:.1f}h")
+                        st.session_state.create_row_ids = [0]
+                        st.session_state.create_row_next_id = 1
+                        st.rerun()
+                    except Exception as e:
+                        st.error(str(e))
 
         # ---- Editar ----
         with tab_edit:
@@ -227,7 +264,7 @@ def render():
                                                   help="Selecciona el perfil para esta asignación")
                     
                     col3, col4, col5 = st.columns([1,1,1])
-                    dedicacion_e = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=160.0, value=float(sel.dedicacion_horas), step=1.0, format="%.1f")
+                    dedicacion_e = col3.number_input("Dedicación (horas)", min_value=1.0, max_value=200.0, value=float(sel.dedicacion_horas), step=1.0, format="%.1f")
                     tarifa_e = col4.number_input("Tarifa", min_value=0.0, value=float(sel.tarifa) if sel.tarifa else 0.0, step=0.01, format="%.2f", help="Tarifa por hora")
                     fi_e = col5.date_input("Fecha asignacion", value=sel.fecha_asignacion)
                     ff_e = st.date_input("Fecha fin (opcional)", value=sel.fecha_fin) if st.checkbox("Modificar fecha fin", value=bool(sel.fecha_fin)) else sel.fecha_fin

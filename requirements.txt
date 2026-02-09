@@ -9,3 +9,5 @@ uvicorn[standard]
 orjson
 extra-streamlit-components
 pyjwt
+plotly
+pandas
