@@ -1,11 +1,11 @@
-# apps/dashboard/pages/09_Mapa_Recursos.py
+# apps/dashboard/pages/09_Roles.py
 import streamlit as st
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 from shared.auth.auth import require_authentication, is_authenticated, hide_sidebar, init_auth
-from apps.mapa_recursos.main import render
+from apps.roles.main import render
 
 # IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie
 init_auth()

@@ -2,7 +2,7 @@
 
 import streamlit as st
 from datetime import date
-from domain.schemas.personas import PersonaCreate, PersonaUpdate, ROLES_PERMITIDOS, SENIORITY_PERMITIDOS, TIPOS_DOCUMENTO_PERMITIDOS
+from domain.schemas.personas import PersonaCreate, PersonaUpdate, get_roles_permitidos, SENIORITY_PERMITIDOS, TIPOS_DOCUMENTO_PERMITIDOS
 from domain.services import personas_service
 from shared.utils.exports import export_csv
 from shared.auth.auth import can_edit
@@ -13,7 +13,8 @@ def render():
 
     col_f1, col_f2, col_f3 = st.columns([1,1,2])
     with col_f1:
-        rol_filter = st.selectbox("Rol", options=["(Todos)"] + ROLES_PERMITIDOS, index=0)
+        _roles = get_roles_permitidos()
+        rol_filter = st.selectbox("Rol", options=["(Todos)"] + _roles, index=0)
         rol_filter_val = None if rol_filter == "(Todos)" else rol_filter
     with col_f2:
         estado = st.selectbox("Estado", options=["Activas", "Inactivas", "Todas"], index=0)
@@ -58,7 +59,7 @@ def render():
             with st.form("form_create", clear_on_submit=True):
                 c1, c2, c3 = st.columns([2,1,1])
                 nombre = c1.text_input("Nombre", "")
-                rol = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=0)
+                rol = c2.selectbox("Rol Principal", options=get_roles_permitidos(), index=0)
                 tarifa = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
                 
                 # Segunda fila: documento, contacto, correo
@@ -137,7 +138,8 @@ def render():
                 with st.form("form_edit"):
                     c1, c2, c3 = st.columns([2,1,1])
                     nombre_e = c1.text_input("Nombre", sel.nombre)
-                    rol_e = c2.selectbox("Rol Principal", options=ROLES_PERMITIDOS, index=(ROLES_PERMITIDOS.index(sel.ROL_PRINCIPAL) if sel.ROL_PRINCIPAL in ROLES_PERMITIDOS else 0))
+                    _roles_e = get_roles_permitidos()
+                    rol_e = c2.selectbox("Rol Principal", options=_roles_e, index=(_roles_e.index(sel.ROL_PRINCIPAL) if sel.ROL_PRINCIPAL in _roles_e else 0))
                     tarifa_e = c3.number_input("Costo Recurso (opcional)", min_value=0.0, value=float(sel.COSTO_RECURSO or 0.0), step=1000.0, format="%.2f")
                     
                     # Segunda fila: documento, contacto, correo

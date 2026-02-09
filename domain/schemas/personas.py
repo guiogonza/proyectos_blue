@@ -3,14 +3,26 @@
 from typing import Optional
 from pydantic import BaseModel, Field, validator
 
-ROLES_PERMITIDOS = [
+_ROLES_FALLBACK = [
     "Technician I",
     "Technician II",
     "Experienced Technician I",
     "Experienced Technician II",
     "Technician specialist",
-    "Technician architect"
+    "Technician architect",
 ]
+
+def get_roles_permitidos():
+    """Carga roles activos desde BD. Si falla, usa fallback hardcodeado."""
+    try:
+        from infra.repositories import roles_repo
+        roles = roles_repo.list_active_role_names()
+        return roles if roles else _ROLES_FALLBACK
+    except Exception:
+        return _ROLES_FALLBACK
+
+# Para compatibilidad con imports existentes
+ROLES_PERMITIDOS = _ROLES_FALLBACK
 SENIORITY_PERMITIDOS = ["Junior", "Semi-Senior", "Senior", "Lead", "Principal"]
 TIPOS_DOCUMENTO_PERMITIDOS = ["Cédula", "Pasaporte", "DNI", "Otro"]
 
@@ -29,8 +41,9 @@ class PersonaCreate(BaseModel):
 
     @validator("ROL_PRINCIPAL")
     def validar_rol(cls, v):
-        if v not in ROLES_PERMITIDOS:
-            raise ValueError(f"Rol inválido. Usa uno de: {', '.join(ROLES_PERMITIDOS)}")
+        roles = get_roles_permitidos()
+        if v not in roles:
+            raise ValueError(f"Rol inválido. Usa uno de: {', '.join(roles)}")
         return v
     
     @validator("SENIORITY")
