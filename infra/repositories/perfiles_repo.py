@@ -27,25 +27,25 @@ def _log_event(conn, tipo: str, entidad_id: int, detalle: Dict[str, Any] | None 
                 (actor_id, tipo, "perfiles", entidad_id)
             )
 
-def create_perfil(nombre: str) -> int:
+def create_perfil(nombre: str, tarifa_sin_iva: Optional[float] = None, vigencia=None) -> int:
     """Crea un nuevo perfil y devuelve su ID"""
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO perfiles (nombre, activo) VALUES (%s, 1)",
-            (nombre,)
+            "INSERT INTO perfiles (nombre, tarifa_sin_iva, vigencia, activo) VALUES (%s, %s, %s, 1)",
+            (nombre, tarifa_sin_iva, vigencia)
         )
         perfil_id = cur.lastrowid
-        _log_event(conn, "create", perfil_id, {"nombre": nombre})
+        _log_event(conn, "create", perfil_id, {"nombre": nombre, "tarifa_sin_iva": tarifa_sin_iva, "vigencia": str(vigencia) if vigencia else None})
         return perfil_id
 
-def update_perfil(perfil_id: int, nombre: str, activo: bool = True) -> None:
+def update_perfil(perfil_id: int, nombre: str, activo: bool = True, tarifa_sin_iva: Optional[float] = None, vigencia=None) -> None:
     """Actualiza un perfil existente"""
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "UPDATE perfiles SET nombre=%s, activo=%s WHERE id=%s",
-            (nombre, 1 if activo else 0, perfil_id)
+            "UPDATE perfiles SET nombre=%s, tarifa_sin_iva=%s, vigencia=%s, activo=%s WHERE id=%s",
+            (nombre, tarifa_sin_iva, vigencia, 1 if activo else 0, perfil_id)
         )
-        _log_event(conn, "update", perfil_id, {"nombre": nombre, "activo": activo})
+        _log_event(conn, "update", perfil_id, {"nombre": nombre, "tarifa_sin_iva": tarifa_sin_iva, "vigencia": str(vigencia) if vigencia else None, "activo": activo})
 
 def delete_perfil(perfil_id: int) -> None:
     """Elimina un perfil verificando que no tenga asignaciones"""

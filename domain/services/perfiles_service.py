@@ -10,7 +10,7 @@ def crear(dto: PerfilCreate) -> int:
     if perfiles_repo.exists_nombre(dto.nombre):
         raise ValueError(f"Ya existe un perfil con el nombre '{dto.nombre}'")
     
-    return perfiles_repo.create_perfil(dto.nombre)
+    return perfiles_repo.create_perfil(dto.nombre, tarifa_sin_iva=dto.tarifa_sin_iva, vigencia=dto.vigencia)
 
 def actualizar(dto: PerfilUpdate) -> None:
     """Actualiza un perfil existente"""
@@ -18,7 +18,7 @@ def actualizar(dto: PerfilUpdate) -> None:
     if perfiles_repo.exists_nombre(dto.nombre, exclude_id=dto.id):
         raise ValueError(f"Ya existe otro perfil con el nombre '{dto.nombre}'")
     
-    perfiles_repo.update_perfil(dto.id, dto.nombre, dto.activo)
+    perfiles_repo.update_perfil(dto.id, dto.nombre, dto.activo, tarifa_sin_iva=dto.tarifa_sin_iva, vigencia=dto.vigencia)
 
 def eliminar(perfil_id: int) -> None:
     """Elimina un perfil"""

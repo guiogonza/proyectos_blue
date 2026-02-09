@@ -1,6 +1,7 @@
 # apps/perfiles/main.py
 
 import streamlit as st
+from datetime import date
 from domain.schemas.perfiles import PerfilCreate, PerfilUpdate
 from domain.services import perfiles_service
 from shared.utils.exports import export_csv
@@ -44,10 +45,15 @@ def render():
         with tab_create:
             with st.form("form_create_perfil", clear_on_submit=True):
                 nombre = st.text_input("Nombre del perfil", "")
+                col_t1, col_t2 = st.columns(2)
+                with col_t1:
+                    tarifa = st.number_input("Tarifa sin IVA ($)", min_value=0.0, step=0.01, format="%.2f", key="create_tarifa")
+                with col_t2:
+                    vigencia = st.date_input("Vigencia", value=date.today(), key="create_vigencia")
                 
                 if st.form_submit_button("Crear"):
                     try:
-                        dto = PerfilCreate(nombre=nombre.strip())
+                        dto = PerfilCreate(nombre=nombre.strip(), tarifa_sin_iva=tarifa, vigencia=vigencia)
                         perfil_id = perfiles_service.crear(dto)
                         st.success(f"Perfil creado con ID {perfil_id}")
                         st.rerun()
@@ -64,6 +70,11 @@ def render():
                 
                 with st.form("form_edit_perfil"):
                     nombre_e = st.text_input("Nombre del perfil", sel.nombre)
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        tarifa_e = st.number_input("Tarifa sin IVA ($)", min_value=0.0, step=0.01, format="%.2f", value=float(sel.tarifa_sin_iva) if sel.tarifa_sin_iva else 0.0, key="edit_tarifa")
+                    with col_e2:
+                        vigencia_e = st.date_input("Vigencia", value=sel.vigencia if sel.vigencia else date.today(), key="edit_vigencia")
                     activo_e = st.checkbox("Activo", value=sel.activo)
                     
                     if st.form_submit_button("Guardar cambios"):
@@ -71,6 +82,8 @@ def render():
                             dto = PerfilUpdate(
                                 id=sel.id,
                                 nombre=nombre_e.strip(),
+                                tarifa_sin_iva=tarifa_e,
+                                vigencia=vigencia_e,
                                 activo=activo_e
                             )
                             perfiles_service.actualizar(dto)
