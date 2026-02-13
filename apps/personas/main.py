@@ -2,7 +2,7 @@
 
 import streamlit as st
 from datetime import date
-from domain.schemas.personas import PersonaCreate, PersonaUpdate, get_roles_permitidos, SENIORITY_PERMITIDOS, TIPOS_DOCUMENTO_PERMITIDOS
+from domain.schemas.personas import PersonaCreate, PersonaUpdate, get_roles_permitidos, SENIORITY_PERMITIDOS, TIPOS_DOCUMENTO_PERMITIDOS, PAISES_PERMITIDOS
 from domain.services import personas_service
 from shared.utils.exports import export_csv
 from shared.auth.auth import can_edit
@@ -64,20 +64,19 @@ def render():
                 
                 # Segunda fila: documento, contacto, correo
                 c4, c5, c6 = st.columns([1,1,1])
-                tipo_doc = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, index=0)
-                numero_doc = c5.text_input("Número Documento (opcional)", "")
+                tipo_doc = c4.selectbox("Tipo Documento *", options=TIPOS_DOCUMENTO_PERMITIDOS, index=0)
+                numero_doc = c5.text_input("Número Documento *", "")
                 numero_contacto = c6.text_input("Número de contacto (opcional)", "")
                 
-                # Tercera fila: país, seniority
-                c7, c8, c9 = st.columns([1,1,1])
+                # Tercera fila: correo, país
+                c7, c8, _ = st.columns([1,1,1])
                 correo = c7.text_input("Correo electrónico (opcional)", "")
-                pais = c8.text_input("País (opcional)", "")
-                seniority = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, index=0)
+                pais = c8.selectbox("País *", options=PAISES_PERMITIDOS, index=0)
                 
                 # Cuarta fila: vigencia
                 c10, _, _ = st.columns([1,1,1])
-                vigencia = c10.number_input("Vigencia (año)", min_value=1900, max_value=2100, value=date.today().year, step=1,
-                                           help="Año de vigencia del colaborador")
+                vigencia = c10.date_input("Vigencia *", value=date.today(),
+                                         help="Fecha de vigencia del colaborador", format="DD/MM/YYYY")
                 
                 st.caption(f"Líder seleccionado: **{lider_sel or 'Sin líder'}**")
                 
@@ -87,11 +86,11 @@ def render():
                             nombre=nombre.strip(), 
                             ROL_PRINCIPAL=rol, 
                             COSTO_RECURSO=(tarifa if tarifa > 0 else None),
-                            NUMERO_DOCUMENTO=numero_doc.strip() if numero_doc.strip() else None,
+                            NUMERO_DOCUMENTO=numero_doc.strip(),
                             numero_contacto=numero_contacto.strip() if numero_contacto.strip() else None,
                             correo=correo.strip() if correo.strip() else None,
-                            PAIS=pais.strip() if pais.strip() else None,
-                            SENIORITY=seniority,
+                            PAIS=pais,
+                            SENIORITY=None,
                             LIDER_DIRECTO=lider_id,
                             TIPO_DOCUMENTO=tipo_doc,
                             vigencia=vigencia
@@ -144,23 +143,22 @@ def render():
                     
                     # Segunda fila: documento, contacto, correo
                     c4, c5, c6 = st.columns([1,1,1])
-                    tipo_doc_e = c4.selectbox("Tipo Documento", options=TIPOS_DOCUMENTO_PERMITIDOS, 
+                    tipo_doc_e = c4.selectbox("Tipo Documento *", options=TIPOS_DOCUMENTO_PERMITIDOS, 
                                              index=(TIPOS_DOCUMENTO_PERMITIDOS.index(sel.TIPO_DOCUMENTO) if sel.TIPO_DOCUMENTO and sel.TIPO_DOCUMENTO in TIPOS_DOCUMENTO_PERMITIDOS else 0))
-                    numero_doc_e = c5.text_input("Número Documento (opcional)", sel.NUMERO_DOCUMENTO or "")
+                    numero_doc_e = c5.text_input("Número Documento *", sel.NUMERO_DOCUMENTO or "")
                     numero_contacto_e = c6.text_input("Número de contacto (opcional)", sel.numero_contacto or "")
                     
-                    # Tercera fila: país, seniority, correo
-                    c7, c8, c9 = st.columns([1,1,1])
+                    # Tercera fila: correo, país
+                    c7, c8, _ = st.columns([1,1,1])
                     correo_e = c7.text_input("Correo electrónico (opcional)", sel.correo or "")
-                    pais_e = c8.text_input("País (opcional)", sel.PAIS or "")
-                    seniority_e = c9.selectbox("Seniority", options=SENIORITY_PERMITIDOS, 
-                                              index=(SENIORITY_PERMITIDOS.index(sel.SENIORITY) if sel.SENIORITY and sel.SENIORITY in SENIORITY_PERMITIDOS else 0))
+                    pais_e = c8.selectbox("País *", options=PAISES_PERMITIDOS, 
+                                         index=(PAISES_PERMITIDOS.index(sel.PAIS) if sel.PAIS and sel.PAIS in PAISES_PERMITIDOS else 0))
                     
                     # Cuarta fila: vigencia
                     c10, _, _ = st.columns([1,1,1])
-                    vigencia_e = c10.number_input("Vigencia (año)", min_value=1900, max_value=2100, 
-                                                  value=int(sel.vigencia) if sel.vigencia else date.today().year, step=1,
-                                                  help="Año de vigencia del colaborador")
+                    vigencia_e = c10.date_input("Vigencia *", 
+                                               value=sel.vigencia if sel.vigencia else date.today(),
+                                               help="Fecha de vigencia del colaborador", format="DD/MM/YYYY")
                     
                     st.caption(f"Líder seleccionado: **{lider_sel_e or 'Sin líder'}**")
                     
@@ -174,11 +172,11 @@ def render():
                                 nombre=nombre_e.strip(), 
                                 ROL_PRINCIPAL=rol_e, 
                                 COSTO_RECURSO=(tarifa_e if tarifa_e > 0 else None),
-                                NUMERO_DOCUMENTO=numero_doc_e.strip() if numero_doc_e.strip() else None,
+                                NUMERO_DOCUMENTO=numero_doc_e.strip(),
                                 numero_contacto=numero_contacto_e.strip() if numero_contacto_e.strip() else None,
                                 correo=correo_e.strip() if correo_e.strip() else None,
-                                PAIS=pais_e.strip() if pais_e.strip() else None,
-                                SENIORITY=seniority_e,
+                                PAIS=pais_e,
+                                SENIORITY=sel.SENIORITY,  # Mantener el valor existente
                                 LIDER_DIRECTO=lider_id_e,
                                 TIPO_DOCUMENTO=tipo_doc_e,
                                 activo=activo_e,

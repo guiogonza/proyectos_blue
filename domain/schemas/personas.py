@@ -1,6 +1,7 @@
 '''Esquema/DTO Personas (placeholder)'''
 # domain/schemas/personas.py
 from typing import Optional
+from datetime import date
 from pydantic import BaseModel, Field, validator
 
 _ROLES_FALLBACK = [
@@ -24,20 +25,21 @@ def get_roles_permitidos():
 # Para compatibilidad con imports existentes
 ROLES_PERMITIDOS = _ROLES_FALLBACK
 SENIORITY_PERMITIDOS = ["Junior", "Semi-Senior", "Senior", "Lead", "Principal"]
-TIPOS_DOCUMENTO_PERMITIDOS = ["Cédula", "Pasaporte", "DNI", "Otro"]
+TIPOS_DOCUMENTO_PERMITIDOS = ["Cédula", "Pasaporte", "DNI", "Código Bluetab", "Otro"]
+PAISES_PERMITIDOS = ["Argentina", "Colombia", "España", "México", "Perú", "Uruguay"]
 
 class PersonaCreate(BaseModel):
     nombre: str = Field(min_length=2, max_length=200)
     ROL_PRINCIPAL: str
     COSTO_RECURSO: Optional[float] = Field(default=None, ge=0)
-    NUMERO_DOCUMENTO: Optional[str] = Field(default=None, max_length=20)
+    NUMERO_DOCUMENTO: str = Field(min_length=1, max_length=50)
     numero_contacto: Optional[str] = Field(default=None, max_length=15)
     correo: Optional[str] = Field(default=None, max_length=100)
-    PAIS: Optional[str] = Field(default=None, max_length=100)
+    PAIS: str = Field(min_length=1, max_length=100)
     SENIORITY: Optional[str] = None
     LIDER_DIRECTO: Optional[int] = None
-    TIPO_DOCUMENTO: Optional[str] = None
-    vigencia: Optional[int] = Field(default=None, ge=1900, le=2100)
+    TIPO_DOCUMENTO: str
+    vigencia: date
 
     @validator("ROL_PRINCIPAL")
     def validar_rol(cls, v):
@@ -54,8 +56,26 @@ class PersonaCreate(BaseModel):
     
     @validator("TIPO_DOCUMENTO")
     def validar_tipo_documento(cls, v):
-        if v and v not in TIPOS_DOCUMENTO_PERMITIDOS:
-            raise ValueError(f"Tipo de documento inválido. Usa uno de: {', '.join(TIPOS_DOCUMENTO_PERMITIDOS)}")
+        if not v or v not in TIPOS_DOCUMENTO_PERMITIDOS:
+            raise ValueError(f"Tipo de documento es obligatorio. Usa uno de: {', '.join(TIPOS_DOCUMENTO_PERMITIDOS)}")
+        return v
+    
+    @validator("PAIS")
+    def validar_pais(cls, v):
+        if not v or v not in PAISES_PERMITIDOS:
+            raise ValueError(f"País es obligatorio. Usa uno de: {', '.join(PAISES_PERMITIDOS)}")
+        return v
+    
+    @validator("NUMERO_DOCUMENTO")
+    def validar_numero_documento(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Número de documento es obligatorio")
+        return v.strip()
+    
+    @validator("vigencia")
+    def validar_vigencia(cls, v):
+        if not v:
+            raise ValueError("Vigencia es obligatoria")
         return v
     
     @validator("correo")
@@ -78,12 +98,12 @@ class PersonaListItem(BaseModel):
     ROL_PRINCIPAL: str
     COSTO_RECURSO: Optional[float]
     activo: bool
-    NUMERO_DOCUMENTO: Optional[str]
+    NUMERO_DOCUMENTO: str
     numero_contacto: Optional[str]
     correo: Optional[str]
-    PAIS: Optional[str]
+    PAIS: str
     SENIORITY: Optional[str]
     LIDER_DIRECTO: Optional[int]
     LIDER_NOMBRE: Optional[str] = None  # Para mostrar el nombre del líder
-    TIPO_DOCUMENTO: Optional[str]
-    vigencia: Optional[int]
+    TIPO_DOCUMENTO: str
+    vigencia: date
