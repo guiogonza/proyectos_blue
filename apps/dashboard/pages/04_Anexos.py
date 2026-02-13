@@ -3,7 +3,7 @@ import streamlit as st
 import os
 from datetime import datetime, date
 from domain.schemas.documentos import DocumentoCreate, DocumentoUpdate
-from domain.services import documentos_service, proyectos_service
+from domain.services import documentos_service, proyectos_service, personas_service
 from shared.auth.auth import require_authentication, is_admin, get_user_proyectos, can_edit, init_auth
 
 # IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie
@@ -128,10 +128,11 @@ if can_edit():
     tab_upload, tab_edit, tab_delete = st.tabs(["Subir Documento", "Editar", "Eliminar"])
 
     with tab_upload:
-        st.info("📤 Puedes subir múltiples archivos a la vez (máximo 10 MB por archivo)")
+        st.info("� Crear anexo sin archivo asociado")
         
-        MAX_FILE_SIZE_MB = 10
-        MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+        # Obtener personas para el selector
+        personas = personas_service.listar(solo_activas=True)
+        personas_opts = {p.nombre: p.id for p in personas}
         
         with st.form("form_upload", clear_on_submit=True):
             # Selector de proyecto
@@ -139,74 +140,62 @@ if can_edit():
             proyecto_id_sel = proyecto_opts[proyecto_sel]
             
             # Descripción general
-            descripcion = st.text_area("Descripción", placeholder="Descripción general de los documentos", height=80)
+            descripcion = st.text_area("Descripción", placeholder="Descripción general del anexo", height=80)
             
-            # Campos adicionales: valor y fecha
-            col_v, col_f = st.columns(2)
-            with col_v:
+            # Campos adicionales: valor, IVA, nombre y fecha
+            col_v1, col_v2 = st.columns(2)
+            with col_v1:
                 valor = st.number_input("Valor", min_value=0.0, value=0.0, step=0.01, format="%.2f",
                                        help="Valor numérico del anexo (acepta decimales)")
+            with col_v2:
                 iva = st.number_input("IVA", min_value=0.0, value=0.0, step=0.01, format="%.2f",
                                      help="Valor del IVA (acepta decimales)")
+            
+            col_n, col_f = st.columns(2)
+            with col_n:
+                # Selector de nombre de persona (autocompletable con searchbox)
+                persona_sel = st.selectbox(
+                    "Nombre de Persona",
+                    options=list(personas_opts.keys()),
+                    index=None,
+                    placeholder="Escribe para buscar...",
+                    help="Selecciona la persona asociada al anexo"
+                )
+                persona_id_sel = personas_opts.get(persona_sel) if persona_sel else None
             with col_f:
                 fecha_documento = st.date_input("Fecha del documento", value=None,
                                                help="Fecha del documento (puede ser cualquier fecha)")
             
-            # Upload de archivos
-            uploaded_files = st.file_uploader(
-                "Selecciona archivo(s)",
-                accept_multiple_files=True,
-                help="Puedes seleccionar múltiples archivos"
-            )
+            # CAMPO DE CARGA DE ARCHIVOS OCULTO
+            # uploaded_files = st.file_uploader(
+            #     "Selecciona archivo(s)",
+            #     accept_multiple_files=True,
+            #     help="Puedes seleccionar múltiples archivos"
+            # )
             
-            if st.form_submit_button("📤 Subir Documento(s)"):
-                if not uploaded_files:
-                    st.error("Debes seleccionar al menos un archivo")
-                else:
-                    success_count = 0
-                    error_count = 0
+            if st.form_submit_button("� Crear Anexo"):
+                try:
+                    # Crear registro en BD sin archivo físico
+                    nombre_archivo = f"Anexo_{proyecto_sel}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    if persona_sel:
+                        nombre_archivo += f"_{persona_sel.replace(' ', '_')}"
                     
-                    for uploaded_file in uploaded_files:
-                        try:
-                            # Validar tamaño máximo
-                            if uploaded_file.size > MAX_FILE_SIZE_BYTES:
-                                st.error(f"❌ '{uploaded_file.name}' excede el límite de {MAX_FILE_SIZE_MB} MB ({uploaded_file.size / (1024*1024):.1f} MB)")
-                                error_count += 1
-                                continue
-                            
-                            # Generar nombre único para evitar conflictos
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                            filename_safe = uploaded_file.name.replace(" ", "_")
-                            file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{filename_safe}")
-                            
-                            # Guardar archivo
-                            with open(file_path, "wb") as f:
-                                f.write(uploaded_file.getbuffer())
-                            
-                            # Crear registro en BD
-                            dto = DocumentoCreate(
-                                proyecto_id=proyecto_id_sel,
-                                nombre_archivo=uploaded_file.name,
-                                descripcion=descripcion.strip() if descripcion.strip() else None,
-                                ruta_archivo=file_path,
-                                tamanio_bytes=uploaded_file.size,
-                                tipo_mime=uploaded_file.type,
-                                valor=valor if valor > 0 else None,
-                                iva=iva if iva > 0 else None,
-                                fecha_documento=fecha_documento
-                            )
-                            documentos_service.crear(dto)
-                            success_count += 1
-                            
-                        except Exception as e:
-                            error_count += 1
-                            st.error(f"Error al subir '{uploaded_file.name}': {str(e)}")
-                    
-                    if success_count > 0:
-                        st.success(f"✅ {success_count} archivo(s) subido(s) exitosamente")
-                        st.rerun()
-                    if error_count > 0:
-                        st.warning(f"⚠️ {error_count} archivo(s) fallaron")
+                    dto = DocumentoCreate(
+                        proyecto_id=proyecto_id_sel,
+                        nombre_archivo=nombre_archivo,
+                        descripcion=descripcion.strip() if descripcion.strip() else None,
+                        ruta_archivo=None,  # Sin archivo físico
+                        tamanio_bytes=0,
+                        tipo_mime=None,
+                        valor=valor if valor > 0 else None,
+                        iva=iva if iva > 0 else None,
+                        fecha_documento=fecha_documento
+                    )
+                    documentos_service.crear(dto)
+                    st.success("✅ Anexo creado exitosamente")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al crear anexo: {str(e)}")
 
     with tab_edit:
         if not items:
