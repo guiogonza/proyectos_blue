@@ -21,7 +21,7 @@ def eliminar(doc_id: int) -> None:
     if doc:
         # Intentar eliminar archivo físico
         try:
-            if os.path.exists(doc["ruta_archivo"]):
+            if doc.get("ruta_archivo") and os.path.exists(doc["ruta_archivo"]):
                 os.remove(doc["ruta_archivo"])
         except Exception:
             pass  # Continuar aunque falle eliminar el archivo

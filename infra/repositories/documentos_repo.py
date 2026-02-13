@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 from datetime import date
 from infra.db.connection import get_conn
 
-def create_documento(proyecto_id: int, nombre_archivo: str, ruta_archivo: str, 
+def create_documento(proyecto_id: int, nombre_archivo: str, ruta_archivo: Optional[str] = None, 
                      descripcion: Optional[str] = None, tamanio_bytes: Optional[int] = None,
                      tipo_mime: Optional[str] = None, valor: Optional[float] = None,
                      iva: Optional[float] = None, fecha_documento: Optional[date] = None) -> int:
