@@ -28,11 +28,24 @@ from domain.schemas.usuarios import UsuarioListItem
 from domain.schemas.documentos import DocumentoListItem
 from domain.schemas.perfiles import PerfilListItem
 
+tags_metadata = [
+    {"name": "Anexos", "description": "Consulta de anexos/documentos asociados a proyectos"},
+    {"name": "Asignaciones", "description": "Consulta de asignaciones persona-proyecto"},
+    {"name": "Documentos", "description": "Ver y descargar archivos de documentos"},
+    {"name": "Health", "description": "Estado de la API"},
+    {"name": "Perfiles", "description": "Consulta de perfiles y tarifas"},
+    {"name": "Personas", "description": "Consulta de personas"},
+    {"name": "Proyectos", "description": "Consulta de proyectos"},
+    {"name": "Sprints", "description": "Consulta de sprints"},
+    {"name": "Usuarios", "description": "Consulta de usuarios"},
+]
+
 app = FastAPI(
     title="Project Ops API - Read Only",
     description="API REST de solo lectura para consulta de proyectos, sprints, personas y asignaciones. No permite crear, editar ni eliminar datos.",
     version="1.0.0",
-    default_response_class=ORJSONResponse
+    default_response_class=ORJSONResponse,
+    openapi_tags=tags_metadata
 )
 
 # Configurar CORS para permitir acceso desde cualquier origen
