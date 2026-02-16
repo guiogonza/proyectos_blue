@@ -17,7 +17,8 @@ from domain.services import (
     asignaciones_service,
     usuarios_service,
     auth_service,
-    documentos_service
+    documentos_service,
+    perfiles_service
 )
 from domain.schemas.personas import PersonaListItem
 from domain.schemas.proyectos import ProyectoListItem
@@ -25,6 +26,7 @@ from domain.schemas.sprints import SprintListItem
 from domain.schemas.asignaciones import AsignacionListItem
 from domain.schemas.usuarios import UsuarioListItem
 from domain.schemas.documentos import DocumentoListItem
+from domain.schemas.perfiles import PerfilListItem
 
 app = FastAPI(
     title="Project Ops API - Read Only",
@@ -156,6 +158,27 @@ def listar_usuarios(
         raise HTTPException(status_code=403, detail="No tienes permisos para ver usuarios")
     return usuarios_service.listar()
 
+# ==================== PERFILES ====================
+@app.get("/api/perfiles", response_model=List[PerfilListItem], tags=["Perfiles"])
+def listar_perfiles(
+    solo_activos: Optional[bool] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Obtener lista de perfiles"""
+    return perfiles_service.listar(solo_activos, search)
+
+@app.get("/api/perfiles/{perfil_id}", response_model=PerfilListItem, tags=["Perfiles"])
+def obtener_perfil(
+    perfil_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Obtener un perfil por ID"""
+    perfil = perfiles_service.obtener(perfil_id)
+    if not perfil:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+    return perfil
+
 # ==================== HEALTH CHECK ====================
 @app.get("/api/health", tags=["Health"])
 def health_check():
@@ -265,6 +288,7 @@ def root():
             "sprints": "/api/sprints",
             "asignaciones": "/api/asignaciones",
             "usuarios": "/api/usuarios",
+            "perfiles": "/api/perfiles",
             "anexos": "/api/anexos",
             "anexos_por_proyecto": "/api/anexos/proyecto/{proyecto_id}"
         }
