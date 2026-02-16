@@ -95,7 +95,7 @@ if items:
             "ID": doc.id,
             "Proyecto": doc.proyecto_nombre or f"ID {doc.proyecto_id}",
             "Nombre Archivo": doc.nombre_archivo,
-            "Ver": f"{API_BASE_URL}/{doc.id}/view",
+            "Ver": f"{API_BASE_URL}/{doc.id}/view" if doc.ruta_archivo else None,
             "Descripción": doc.descripcion or "",
             "Valor": valor_str,
             "IVA": iva_str,

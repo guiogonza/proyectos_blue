@@ -142,7 +142,7 @@ def descargar_documento(documento_id: int):
     if not doc:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     
-    if not os.path.exists(doc.ruta_archivo):
+    if not doc.ruta_archivo or not os.path.exists(doc.ruta_archivo):
         raise HTTPException(status_code=404, detail="Archivo no encontrado en el servidor")
     
     return FileResponse(
@@ -158,7 +158,7 @@ def ver_documento(documento_id: int):
     if not doc:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     
-    if not os.path.exists(doc.ruta_archivo):
+    if not doc.ruta_archivo or not os.path.exists(doc.ruta_archivo):
         raise HTTPException(status_code=404, detail="Archivo no encontrado en el servidor")
     
     # Para visualización inline en el navegador
