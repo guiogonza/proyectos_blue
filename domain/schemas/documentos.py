@@ -28,6 +28,7 @@ class DocumentoListItem(BaseModel):
     id: int
     proyecto_id: int
     proyecto_nombre: Optional[str] = None
+    persona_nombre: Optional[str] = None
     nombre_archivo: str
     descripcion: Optional[str]
     ruta_archivo: Optional[str] = None

@@ -36,9 +36,10 @@ def get_documento(doc_id: int) -> Optional[Dict[str, Any]]:
         return cur.fetchone()
 
 def list_documentos(proyecto_id: Optional[int] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
-    sql = """SELECT d.*, p.NOMBRE as proyecto_nombre 
+    sql = """SELECT d.*, p.NOMBRE as proyecto_nombre, per.nombre as persona_nombre
              FROM documentos d
-             LEFT JOIN proyectos p ON d.proyecto_id = p.id"""
+             LEFT JOIN proyectos p ON d.proyecto_id = p.id
+             LEFT JOIN personas per ON p.pm_id = per.id"""
     where, params = [], []
     if proyecto_id:
         where.append("d.proyecto_id=%s")
