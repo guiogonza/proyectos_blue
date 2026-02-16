@@ -13,6 +13,7 @@ class DocumentoCreate(BaseModel):
     valor: Optional[float] = Field(default=None, ge=0)
     iva: Optional[float] = Field(default=None, ge=0)
     fecha_documento: Optional[date] = None
+    id_sap: Optional[str] = Field(default=None, max_length=50)
 
 class DocumentoUpdate(BaseModel):
     id: int
@@ -21,6 +22,7 @@ class DocumentoUpdate(BaseModel):
     valor: Optional[float] = Field(default=None, ge=0)
     iva: Optional[float] = Field(default=None, ge=0)
     fecha_documento: Optional[date] = None
+    id_sap: Optional[str] = Field(default=None, max_length=50)
 
 class DocumentoListItem(BaseModel):
     id: int
@@ -35,3 +37,4 @@ class DocumentoListItem(BaseModel):
     valor: Optional[float] = None
     iva: Optional[float] = None
     fecha_documento: Optional[date] = None
+    id_sap: Optional[str] = None

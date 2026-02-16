@@ -1,6 +1,7 @@
 # apps/dashboard/pages/04_Anexos.py
 import streamlit as st
 import os
+import re
 from datetime import datetime, date
 from domain.schemas.documentos import DocumentoCreate, DocumentoUpdate
 from domain.services import documentos_service, proyectos_service, personas_service
@@ -91,12 +92,16 @@ if items:
         # Formatear fecha documento
         fecha_doc_str = doc.fecha_documento.strftime("%Y-%m-%d") if doc.fecha_documento else ""
         
+        # Extraer nombre de persona del nombre_archivo (patrón: ..._YYYYMMDD_HHMMSS_NOMBRE_APELLIDO)
+        persona_match = re.search(r'_\d{8}_\d{6}_(.+)$', doc.nombre_archivo or "")
+        persona_str = persona_match.group(1).replace("_", " ") if persona_match else ""
+        
         display_data.append({
             "ID": doc.id,
             "Proyecto": doc.proyecto_nombre or f"ID {doc.proyecto_id}",
-            "Nombre Archivo": doc.nombre_archivo,
-            "Ver": f"{API_BASE_URL}/{doc.id}/view",
+            "Nombre Archivo": persona_str,
             "Descripción": doc.descripcion or "",
+            "ID_SAP": doc.id_sap or "",
             "Valor": valor_str,
             "IVA": iva_str,
             "Fecha Doc": fecha_doc_str,
@@ -104,18 +109,11 @@ if items:
             "Fecha Carga": doc.fecha_carga.strftime("%Y-%m-%d %H:%M:%S")
         })
     
-    # Mostrar tabla con links clicables
+    # Mostrar tabla
     st.dataframe(
         display_data, 
         use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "Ver": st.column_config.LinkColumn(
-                "📄 Ver",
-                help="Click para ver el documento",
-                display_text="Abrir"
-            )
-        }
+        hide_index=True
     )
 else:
     st.info("No hay documentos con los filtros seleccionados.")
@@ -166,6 +164,9 @@ if can_edit():
                 fecha_documento = st.date_input("Fecha del documento", value=None,
                                                help="Fecha del documento (puede ser cualquier fecha)")
             
+            id_sap = st.text_input("ID SAP", placeholder="Identificador SAP del anexo",
+                                  help="Código de identificación en SAP (opcional)")
+            
             # CAMPO DE CARGA DE ARCHIVOS OCULTO
             # uploaded_files = st.file_uploader(
             #     "Selecciona archivo(s)",
@@ -189,7 +190,8 @@ if can_edit():
                         tipo_mime=None,
                         valor=valor if valor > 0 else None,
                         iva=iva if iva > 0 else None,
-                        fecha_documento=fecha_documento
+                        fecha_documento=fecha_documento,
+                        id_sap=id_sap.strip() if id_sap.strip() else None
                     )
                     documentos_service.crear(dto)
                     st.success("✅ Anexo creado exitosamente")
@@ -220,6 +222,9 @@ if can_edit():
                     fecha_doc_e = st.date_input("Fecha del documento", value=sel.fecha_documento,
                                                help="Fecha del documento (puede ser cualquier fecha)")
                 
+                id_sap_e = st.text_input("ID SAP", value=sel.id_sap or "",
+                                        help="Código de identificación en SAP (opcional)")
+                
                 st.caption(f"📁 Ruta: {sel.ruta_archivo}")
                 st.caption(f"📅 Subido: {sel.fecha_carga.strftime('%Y-%m-%d %H:%M:%S')}")
                 
@@ -231,7 +236,8 @@ if can_edit():
                             descripcion=desc_e.strip() if desc_e.strip() else None,
                             valor=valor_e if valor_e > 0 else None,
                             iva=iva_e if iva_e > 0 else None,
-                            fecha_documento=fecha_doc_e
+                            fecha_documento=fecha_doc_e,
+                            id_sap=id_sap_e.strip() if id_sap_e.strip() else None
                         )
                         documentos_service.actualizar(dto)
                         st.success("Cambios guardados")
