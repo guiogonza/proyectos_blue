@@ -162,42 +162,110 @@ def ver_documento(documento_id: int):
             <style>body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#1a1a2e;color:#e0e0e0;}
             .box{text-align:center;padding:40px;border-radius:12px;background:#16213e;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
             h1{color:#e94560;font-size:48px;margin:0 0 10px;} p{font-size:18px;color:#a0a0b0;}
-            a{color:#0f3460;background:#e94560;padding:10px 24px;border-radius:6px;text-decoration:none;color:#fff;display:inline-block;margin-top:20px;}
+            a{color:#fff;background:#e94560;padding:10px 24px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:20px;}
             </style></head><body><div class='box'><h1>404</h1><p>Documento no encontrado</p><a href='javascript:window.close()'>Cerrar</a></div></body></html>
             """,
             status_code=404
         )
     
-    if not doc.ruta_archivo or not os.path.exists(doc.ruta_archivo):
-        return HTMLResponse(
-            content=f"""
-            <html><head><title>Sin archivo</title>
-            <style>body{{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#1a1a2e;color:#e0e0e0;}}
-            .box{{text-align:center;padding:40px;border-radius:12px;background:#16213e;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:500px;}}
-            h1{{color:#e94560;font-size:36px;margin:0 0 10px;}} h2{{color:#a0a0b0;font-weight:normal;font-size:16px;margin:0 0 20px;}}
-            .info{{background:#0f3460;padding:15px;border-radius:8px;margin:15px 0;text-align:left;}}
-            .info p{{margin:5px 0;font-size:14px;}} .label{{color:#a0a0b0;}} .value{{color:#e0e0e0;}}
-            a{{color:#fff;background:#e94560;padding:10px 24px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:15px;}}
-            </style></head><body><div class='box'>
-            <h1>📄 Sin archivo</h1>
-            <h2>Este anexo no tiene un archivo f\u00edsico asociado</h2>
-            <div class='info'>
-            <p><span class='label'>Nombre:</span> <span class='value'>{doc.nombre_archivo}</span></p>
-            <p><span class='label'>Descripci\u00f3n:</span> <span class='value'>{doc.descripcion or 'N/A'}</span></p>
-            </div>
-            <a href='javascript:window.close()'>Cerrar</a>
-            </div></body></html>
-            """,
-            status_code=200
-        )
+    tiene_archivo = doc.ruta_archivo and os.path.exists(doc.ruta_archivo)
     
-    # Para visualizaci\u00f3n inline en el navegador
-    return FileResponse(
-        path=doc.ruta_archivo,
-        filename=doc.nombre_archivo,
-        media_type=doc.tipo_mime or "application/octet-stream",
-        headers={"Content-Disposition": f"inline; filename=\"{doc.nombre_archivo}\""}
-    )
+    # Formatear valores
+    valor_fmt = f"${doc.valor:,.2f}" if doc.valor else "N/A"
+    iva_fmt = f"${doc.iva:,.2f}" if doc.iva else "N/A"
+    fecha_doc_fmt = doc.fecha_documento.strftime("%Y-%m-%d") if doc.fecha_documento else "N/A"
+    fecha_carga_fmt = doc.fecha_carga.strftime("%Y-%m-%d %H:%M:%S") if doc.fecha_carga else "N/A"
+    descripcion = doc.descripcion or "N/A"
+    proyecto = doc.proyecto_nombre or f"Proyecto ID {doc.proyecto_id}"
+    
+    # Botón de descarga solo si hay archivo
+    download_btn = ""
+    if tiene_archivo:
+        download_btn = f'<a href="/api/documentos/{doc.id}/download" class="btn btn-download">⬇ Descargar archivo</a>'
+    
+    # Si tiene archivo físico, mostrar visor con iframe + info
+    if tiene_archivo:
+        archivo_section = f'''
+        <div class="file-viewer">
+            <iframe src="/api/documentos/{doc.id}/download" width="100%" height="500px" style="border:none;border-radius:8px;"></iframe>
+        </div>'''
+    else:
+        archivo_section = '''
+        <div class="no-file">
+            <span class="no-file-icon">📋</span>
+            <p>Este anexo es un registro de datos sin archivo físico adjunto</p>
+        </div>'''
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{doc.nombre_archivo}</title>
+        <style>
+            * {{ margin:0; padding:0; box-sizing:border-box; }}
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; background:#0e1117; color:#e0e0e0; min-height:100vh; padding:20px; }}
+            .container {{ max-width:900px; margin:0 auto; }}
+            .header {{ background:linear-gradient(135deg, #16213e 0%, #1a1a2e 100%); padding:24px 30px; border-radius:12px 12px 0 0; border-bottom:2px solid #e94560; }}
+            .header h1 {{ font-size:18px; color:#fff; word-break:break-all; }}
+            .header .subtitle {{ color:#a0a0b0; font-size:13px; margin-top:6px; }}
+            .body {{ background:#16213e; padding:24px 30px; }}
+            .grid {{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }}
+            .card {{ background:#0f3460; border-radius:8px; padding:16px; }}
+            .card .label {{ font-size:11px; text-transform:uppercase; color:#7a8ba0; letter-spacing:1px; margin-bottom:4px; }}
+            .card .value {{ font-size:18px; font-weight:600; color:#fff; }}
+            .card .value.money {{ color:#4ecca3; }}
+            .card .value.desc {{ font-size:14px; font-weight:normal; color:#c0c0d0; }}
+            .file-viewer {{ margin-top:20px; }}
+            .no-file {{ text-align:center; padding:40px 20px; background:#0f3460; border-radius:8px; margin-top:20px; }}
+            .no-file-icon {{ font-size:48px; display:block; margin-bottom:10px; }}
+            .no-file p {{ color:#7a8ba0; font-size:14px; }}
+            .footer {{ background:#16213e; padding:20px 30px; border-radius:0 0 12px 12px; display:flex; gap:12px; justify-content:flex-end; border-top:1px solid #0f3460; }}
+            .btn {{ padding:10px 24px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; display:inline-flex; align-items:center; gap:6px; cursor:pointer; border:none; }}
+            .btn-download {{ background:#4ecca3; color:#0e1117; }}
+            .btn-download:hover {{ background:#3db88f; }}
+            .btn-close {{ background:#374151; color:#e0e0e0; }}
+            .btn-close:hover {{ background:#4b5563; }}
+            @media (max-width:600px) {{ .grid {{ grid-template-columns:1fr; }} }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📄 {doc.nombre_archivo}</h1>
+                <div class="subtitle">{proyecto} &middot; ID #{doc.id}</div>
+            </div>
+            <div class="body">
+                <div class="grid">
+                    <div class="card">
+                        <div class="label">Valor</div>
+                        <div class="value money">{valor_fmt}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">IVA</div>
+                        <div class="value money">{iva_fmt}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Descripción</div>
+                        <div class="value desc">{descripcion}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Fecha Documento</div>
+                        <div class="value">{fecha_doc_fmt}</div>
+                    </div>
+                </div>
+                {archivo_section}
+            </div>
+            <div class="footer">
+                {download_btn}
+                <a href="javascript:window.close()" class="btn btn-close">✕ Cerrar</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html, status_code=200)
 
 # ==================== HEALTH CHECK ====================
 @app.get("/api/health", tags=["Health"])
