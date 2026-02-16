@@ -333,28 +333,33 @@ def render():
 
     if not df_exp.empty:
         tf1, tf2, tf3 = st.columns(3)
-        meses_map = {1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun",
-                     7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic"}
         with tf1:
-            sel_mes = st.multiselect("MES", sorted(df_exp["mes"].unique()), default=[],
-                                     format_func=lambda x: meses_map.get(x, x), key="dt_mes")
-        with tf2:
             sel_pt = st.multiselect("PROYECTO", sorted(df_exp["proyecto"].unique()), default=[], key="dt_proy")
-        with tf3:
+        with tf2:
             sel_cb = st.multiselect("COLABORADOR", sorted(df_exp["colaborador"].unique()), default=[], key="dt_col")
+        with tf3:
+            sel_cat = st.multiselect("CATEGORÍA", sorted(df_exp["categoria"].dropna().unique()), default=[], key="dt_cat")
 
         dt = df_exp.copy()
-        if sel_mes:
-            dt = dt[dt["mes"].isin(sel_mes)]
         if sel_pt:
             dt = dt[dt["proyecto"].isin(sel_pt)]
         if sel_cb:
             dt = dt[dt["colaborador"].isin(sel_cb)]
+        if sel_cat:
+            dt = dt[dt["categoria"].isin(sel_cat)]
 
-        dt["periodo"] = dt["trimestre"]
-        disp = dt[["periodo", "mes", "proyecto", "colaborador", "categoria", "seniority", "horas", "tarifa"]].copy()
-        disp.columns = ["PERIODO", "MES", "PROYECTO", "COLABORADOR", "CATEGORÍA", "SENIORITY", "HORAS LABORADAS", "TARIFA"]
-        disp = disp.sort_values(["PERIODO", "MES", "PROYECTO", "COLABORADOR"])
+        # Agrupar por colaborador + proyecto (sin repetir por mes)
+        grp = dt.groupby(["proyecto", "colaborador", "categoria", "seniority", "tarifa"], dropna=False).agg(
+            meses=("mes", "nunique"),
+            horas_mes=("horas", "first"),
+            costo_total=("costo_mes", "sum"),
+            factura_total=("factura_mes", "sum"),
+        ).reset_index()
+        grp["HORAS TOTALES"] = grp["horas_mes"] * grp["meses"]
+
+        disp = grp[["proyecto", "colaborador", "categoria", "seniority", "horas_mes", "meses", "HORAS TOTALES", "tarifa"]].copy()
+        disp.columns = ["PROYECTO", "COLABORADOR", "CATEGORÍA", "SENIORITY", "HORAS/MES", "MESES", "HORAS TOTALES", "TARIFA"]
+        disp = disp.sort_values(["PROYECTO", "COLABORADOR"])
         disp["TARIFA"] = disp["TARIFA"].apply(lambda x: f"$ {x:,.2f}".replace(",", ".") if x > 0 else "$ 0,00")
 
         st.dataframe(disp, use_container_width=True, hide_index=True, height=500)
