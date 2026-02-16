@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.responses import ORJSONResponse, FileResponse
+from fastapi.responses import ORJSONResponse, FileResponse, HTMLResponse
 from typing import List, Optional
 import sys
 import os
@@ -156,12 +156,42 @@ def ver_documento(documento_id: int):
     """Ver un documento en el navegador (inline)"""
     doc = documentos_service.obtener(documento_id)
     if not doc:
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
+        return HTMLResponse(
+            content="""
+            <html><head><title>No encontrado</title>
+            <style>body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#1a1a2e;color:#e0e0e0;}
+            .box{text-align:center;padding:40px;border-radius:12px;background:#16213e;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+            h1{color:#e94560;font-size:48px;margin:0 0 10px;} p{font-size:18px;color:#a0a0b0;}
+            a{color:#0f3460;background:#e94560;padding:10px 24px;border-radius:6px;text-decoration:none;color:#fff;display:inline-block;margin-top:20px;}
+            </style></head><body><div class='box'><h1>404</h1><p>Documento no encontrado</p><a href='javascript:window.close()'>Cerrar</a></div></body></html>
+            """,
+            status_code=404
+        )
     
     if not doc.ruta_archivo or not os.path.exists(doc.ruta_archivo):
-        raise HTTPException(status_code=404, detail="Archivo no encontrado en el servidor")
+        return HTMLResponse(
+            content=f"""
+            <html><head><title>Sin archivo</title>
+            <style>body{{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#1a1a2e;color:#e0e0e0;}}
+            .box{{text-align:center;padding:40px;border-radius:12px;background:#16213e;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:500px;}}
+            h1{{color:#e94560;font-size:36px;margin:0 0 10px;}} h2{{color:#a0a0b0;font-weight:normal;font-size:16px;margin:0 0 20px;}}
+            .info{{background:#0f3460;padding:15px;border-radius:8px;margin:15px 0;text-align:left;}}
+            .info p{{margin:5px 0;font-size:14px;}} .label{{color:#a0a0b0;}} .value{{color:#e0e0e0;}}
+            a{{color:#fff;background:#e94560;padding:10px 24px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:15px;}}
+            </style></head><body><div class='box'>
+            <h1>📄 Sin archivo</h1>
+            <h2>Este anexo no tiene un archivo f\u00edsico asociado</h2>
+            <div class='info'>
+            <p><span class='label'>Nombre:</span> <span class='value'>{doc.nombre_archivo}</span></p>
+            <p><span class='label'>Descripci\u00f3n:</span> <span class='value'>{doc.descripcion or 'N/A'}</span></p>
+            </div>
+            <a href='javascript:window.close()'>Cerrar</a>
+            </div></body></html>
+            """,
+            status_code=200
+        )
     
-    # Para visualización inline en el navegador
+    # Para visualizaci\u00f3n inline en el navegador
     return FileResponse(
         path=doc.ruta_archivo,
         filename=doc.nombre_archivo,
