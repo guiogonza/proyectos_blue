@@ -11,3 +11,5 @@ extra-streamlit-components
 pyjwt
 plotly
 pandas
+gspread
+google-auth
