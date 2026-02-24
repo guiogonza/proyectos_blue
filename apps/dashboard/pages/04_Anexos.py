@@ -1,5 +1,6 @@
 # apps/dashboard/pages/04_Anexos.py
 import streamlit as st
+st.set_page_config(page_title="Project Ops", page_icon="📊", layout="wide")
 import os
 import re
 from datetime import datetime, date

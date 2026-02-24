@@ -1,5 +1,6 @@
 # apps/dashboard/pages/05_🧾_Bitacora.py
 import streamlit as st
+st.set_page_config(page_title="Project Ops", page_icon="📊", layout="wide")
 from shared.auth.auth import require_authentication, is_authenticated, hide_sidebar, init_auth
 
 # IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie

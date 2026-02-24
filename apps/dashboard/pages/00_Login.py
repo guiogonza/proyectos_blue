@@ -1,5 +1,6 @@
 # apps/dashboard/pages/00_🔐_Login.py
 import streamlit as st
+st.set_page_config(page_title="Project Ops", page_icon="📊", layout="wide")
 from domain.services.auth_service import verify_credentials
 from shared.auth.auth import (
     start_session, end_session, is_authenticated, 

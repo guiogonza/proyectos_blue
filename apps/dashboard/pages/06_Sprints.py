@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(page_title="Project Ops", page_icon="📊", layout="wide")
 from shared.auth.auth import is_authenticated, hide_sidebar, require_authentication, init_auth
 
 # IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie

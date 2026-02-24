@@ -1,5 +1,6 @@
 # apps/dashboard/pages/09_Roles.py
 import streamlit as st
+st.set_page_config(page_title="Project Ops", page_icon="📊", layout="wide")
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
