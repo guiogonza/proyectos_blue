@@ -11,6 +11,7 @@ class Settings:
     ENV: str = os.getenv("ENV", "dev")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     TZ: str = os.getenv("TZ", "America/Bogota")
+    COUNTRY: str = os.getenv("COUNTRY", "colombia")
 
     DB_HOST: str = os.getenv("DB_HOST", "mysql")
     DB_PORT: int = int(os.getenv("DB_PORT", "3306"))  # interno del contenedor

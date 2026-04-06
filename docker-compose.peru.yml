@@ -1,0 +1,98 @@
+# docker-compose.peru.yml
+# Instancia independiente de Project Ops para PERÚ 🇵🇪
+# Uso:
+#   docker compose -f docker-compose.peru.yml --env-file .env.peru up -d
+#
+# Puertos (diferente a Colombia para coexistir en el mismo host):
+#   MySQL   → 3311:3306
+#   Dashboard → 8510:8501
+#   API       → 8511:8000
+
+version: "3.9"
+services:
+  mysql_peru:
+    image: mysql:8.0
+    container_name: project_ops_mysql_peru
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-project_ops_peru}
+      MYSQL_USER: ${DB_USER:-project_ops_user_peru}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-project_ops_pass_peru}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass_peru}
+    ports:
+      - "3311:3306"
+    command: ["--default-authentication-plugin=mysql_native_password", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql_data_peru:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app_peru:
+    image: python:3.11-slim
+    container_name: project_ops_app_peru
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - uploads_data_peru:/app/uploads
+    environment:
+      - PYTHONPATH=/app
+      - COUNTRY=${COUNTRY:-peru}
+      - TZ=${TZ:-America/Lima}
+      - ENV=${ENV:-dev}
+      - DEBUG=${DEBUG:-true}
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-change_me_peru}
+      - DB_HOST=mysql_peru
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-project_ops_peru}
+      - DB_USER=${DB_USER:-project_ops_user_peru}
+      - DB_PASSWORD=${DB_PASSWORD:-project_ops_pass_peru}
+    depends_on:
+      mysql_peru:
+        condition: service_healthy
+    ports:
+      - "8510:8501"
+    command: >
+      bash -lc "
+      pip install --no-cache-dir -r requirements.txt &&
+      streamlit run apps/dashboard/main.py --server.address=0.0.0.0 --server.port=8501 --server.baseUrlPath=/peru
+      "
+
+  api_peru:
+    image: python:3.11-slim
+    container_name: project_ops_api_peru
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - uploads_data_peru:/app/uploads
+    environment:
+      - PYTHONPATH=/app
+      - COUNTRY=${COUNTRY:-peru}
+      - TZ=${TZ:-America/Lima}
+      - ENV=${ENV:-dev}
+      - DEBUG=${DEBUG:-true}
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-change_me_peru}
+      - DB_HOST=mysql_peru
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-project_ops_peru}
+      - DB_USER=${DB_USER:-project_ops_user_peru}
+      - DB_PASSWORD=${DB_PASSWORD:-project_ops_pass_peru}
+      - API_ROOT_PATH=/peru-api
+    depends_on:
+      mysql_peru:
+        condition: service_healthy
+    ports:
+      - "8511:8000"
+    command: >
+      bash -lc "
+      pip install --no-cache-dir -r requirements.txt &&
+      uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+volumes:
+  mysql_data_peru:
+  uploads_data_peru:

@@ -6,6 +6,7 @@ from shared.auth.auth import (
     start_session, end_session, is_authenticated, 
     current_user, hide_sidebar, init_auth
 )
+from shared.config import settings
 
 # IMPORTANTE: Inicializar autenticación para restaurar sesión desde cookie
 init_auth()
@@ -13,6 +14,41 @@ init_auth()
 # Ocultar sidebar si no está autenticado
 if not is_authenticated():
     hide_sidebar()
+
+# --- Configuración por país ---
+_COUNTRY_INFO = {
+    "colombia": {
+        "flag_url": "https://flagcdn.com/48x36/co.png",
+        "name": "Colombia",
+        "tz": "America/Bogota",
+    },
+    "peru": {
+        "flag_url": "https://flagcdn.com/48x36/pe.png",
+        "name": "Perú",
+        "tz": "America/Lima",
+    },
+}
+_country_key = settings.COUNTRY.lower()
+_country = _COUNTRY_INFO.get(
+    _country_key,
+    {"flag_url": "", "name": _country_key.capitalize(), "tz": ""},
+)
+
+# --- Logo + encabezado ---
+BLUETAB_LOGO = "https://bluetab.com/wp-content/uploads/2025/10/Bluetab-IBM-Blanco.png"
+
+st.markdown(
+    f"""
+    <div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;'>
+        <div style='display:flex;align-items:center;gap:12px;'>
+            <img src='{_country["flag_url"]}' style='height:36px;border:1px solid #444;border-radius:3px;' />
+            <span style='font-size:1.2rem;color:#aaa;font-weight:600;'>{_country["name"]}</span>
+        </div>
+        <img src='{BLUETAB_LOGO}' style='height:40px;' onerror="this.style.display='none'" />
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.title("🔐 Iniciar sesión")
 

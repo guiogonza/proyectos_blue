@@ -45,7 +45,8 @@ app = FastAPI(
     description="API REST de solo lectura para consulta de proyectos, sprints, personas y asignaciones. No permite crear, editar ni eliminar datos.",
     version="1.0.0",
     default_response_class=ORJSONResponse,
-    openapi_tags=tags_metadata
+    openapi_tags=tags_metadata,
+    root_path=os.getenv("API_ROOT_PATH", ""),
 )
 
 # Configurar CORS para permitir acceso desde cualquier origen
