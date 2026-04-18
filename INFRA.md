@@ -76,6 +76,18 @@ docker logs -f project_ops_api               # API Colombia
 docker logs -f project_ops_api_peru          # API Perú
 ```
 
+### Checklist post-deploy (Nginx + Docker)
+```bash
+cd /root/project-ops
+chmod +x post_deploy_check.sh
+./post_deploy_check.sh
+```
+
+Para validar contra otro host/IP:
+```bash
+./post_deploy_check.sh 164.68.118.86
+```
+
 ---
 
 ## Archivos de configuración
